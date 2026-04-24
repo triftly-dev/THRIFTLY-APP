@@ -21,30 +21,29 @@ class PaymentController extends Controller
                 throw new Exception('MIDTRANS_SERVER_KEY tidak ditemukan di file .env');
             }
 
-            Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 7) . '...');
+            Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 7) . '...' . substr($serverKey, -4) . ' Length: ' . strlen($serverKey));
             \Midtrans\Config::$serverKey = $serverKey;
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
 
-            Log::info('Step 2: Prepare Params');
             $params = [
                 'transaction_details' => [
-                    'order_id' => 'TEST-' . time(),
-                    'gross_amount' => 10000,
+                    'order_id' => 'ORDER-' . time() . '-' . ($request->product_id ?? 'UNK'),
+                    'gross_amount' => (int) ($request->total_amount ?? 10000),
+                ],
+                'customer_details' => [
+                    'first_name' => Auth::user()->name ?? 'Customer',
+                    'email' => Auth::user()->email ?? 'customer@example.com',
                 ],
             ];
 
-            Log::info('Step 3: Get Snap Token');
-            // Menghasilkan Snap Token dari Midtrans
+            // Menghasilkan Snap Token
             $snapToken = \Midtrans\Snap::getSnapToken($params);
             
-            Log::info('Step 4: Success! Token: ' . $snapToken);
-
             return response()->json([
                 'token' => $snapToken,
                 'snap_token' => $snapToken,
-                'order_id' => 'TEST-' . time()
             ]);
 
         } catch (Exception $e) {
