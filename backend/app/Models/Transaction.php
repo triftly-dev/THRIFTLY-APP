@@ -20,6 +20,8 @@ class Transaction extends Model
         'alamat_pengiriman',
         'video_packing',
         'video_unboxing',
+        'snap_token',
+        'payment_method'
     ];
 
     public function product()

@@ -20,9 +20,11 @@ return new class extends Migration
             $blueprint->bigInteger('harga_final');
             $blueprint->bigInteger('ongkir')->default(0);
             $blueprint->string('status')->default('pending');
-            $blueprint->text('alamat_pengiriman');
+            $blueprint->text('alamat_pengiriman')->nullable();
             $blueprint->string('video_packing')->nullable();
             $blueprint->string('video_unboxing')->nullable();
+            $blueprint->string('snap_token')->nullable();
+            $blueprint->string('payment_method')->nullable();
             $blueprint->timestamps();
         });
     }

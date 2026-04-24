@@ -3,111 +3,105 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Midtrans\Snap;
-use Midtrans\Config;
-use Illuminate\Support\Facades\Log;
+use App\Models\Transaction;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Exception;
+use Midtrans\Config;
+use Midtrans\Snap;
 
 class PaymentController extends Controller
 {
+    public function __construct()
+    {
+        // Konfigurasi Midtrans
+        Config::$serverKey = config('services.midtrans.server_key');
+        Config::$isProduction = config('services.midtrans.is_production');
+        Config::$isSanitized = true;
+        Config::$is3ds = true;
+    }
+
     public function createPayment(Request $request)
     {
-        Log::info("--- START CREATE PAYMENT ---");
-        
         try {
-            // 1. Validasi Input
-            $request->validate([
-                'product_id' => 'required|exists:products,id',
-                'price' => 'required|numeric|min:1',
-                'alamat_pengiriman' => 'required',
-                'seller_id' => 'required'
-            ]);
-            Log::info("Validation Success");
+            Log::info('--- PROSES PAYMENT DIMULAI ---', $request->all());
 
-            // 2. Load Config
-            Config::$serverKey = config('services.midtrans.server_key');
-            Config::$clientKey = config('services.midtrans.client_key');
-            Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
-            Config::$isSanitized = true;
-            Config::$is3ds = true;
-            
-            Log::info("Midtrans Config Loaded. Key: " . substr(Config::$serverKey, 0, 5) . "...");
+            $product = Product::find($request->product_id);
+            if (!$product) {
+                Log::error('Produk tidak ditemukan ID: ' . $request->product_id);
+                return response()->json(['message' => 'Product not found'], 404);
+            }
 
-            $grossAmount = (int) $request->price;
-            $orderId = 'TRX-' . time() . '-' . rand(1000, 9999);
-            $user = Auth::user();
-            Log::info("Order ID: " . $orderId . " for User ID: " . ($user->id ?? 'Guest'));
+            // Gunakan ID user 1 jika tidak login (untuk testing) atau ambil dari auth
+            $userId = Auth::check() ? Auth::id() : 1;
 
-            // 3. Simpan Database
-            DB::transaction(function () use ($orderId, $request, $grossAmount, $user) {
-                \App\Models\Transaction::create([
-                    'order_id' => $orderId,
-                    'product_id' => $request->product_id,
-                    'buyer_id' => $user->id ?? 1,
-                    'seller_id' => $request->seller_id,
-                    'harga_final' => $grossAmount,
-                    'ongkir' => $request->ongkir ?? 0,
+            return DB::transaction(function () use ($product, $userId, $request) {
+                // 1. Buat record transaksi
+                $transaction = Transaction::create([
+                    'order_id' => 'TRX-' . time() . '-' . $userId,
+                    'buyer_id' => $userId,
+                    'seller_id' => $product->user_id, // Ambil pemilik produk
+                    'product_id' => $product->id,
+                    'harga_final' => $request->amount,
+                    'ongkir' => 0,
                     'status' => 'pending',
-                    'alamat_pengiriman' => $request->alamat_pengiriman
+                    'payment_method' => 'midtrans'
+                ]);
+
+                Log::info('Transaction Created: ' . $transaction->order_id);
+
+                // 2. Siapkan Parameter Midtrans
+                $params = [
+                    'transaction_details' => [
+                        'order_id' => $transaction->order_id,
+                        'gross_amount' => (int)$request->amount,
+                    ],
+                    'customer_details' => [
+                        'first_name' => Auth::check() ? Auth::user()->name : 'Guest User',
+                        'email' => Auth::check() ? Auth::user()->email : 'guest@example.com',
+                    ],
+                    'item_details' => [
+                        [
+                            'id' => $product->id,
+                            'price' => (int)$request->amount,
+                            'quantity' => 1,
+                            'name' => substr($product->name, 0, 50),
+                        ]
+                    ]
+                ];
+
+                Log::info('Calling Midtrans Snap...');
+                
+                $snapToken = Snap::getSnapToken($params);
+                
+                Log::info('Snap Token Received: ' . $snapToken);
+
+                $transaction->snap_token = $snapToken;
+                $transaction->save();
+
+                return response()->json([
+                    'snap_token' => $snapToken,
+                    'order_id' => $transaction->order_id
                 ]);
             });
-            Log::info("Database Transaction Success");
 
-            // 4. Panggil Midtrans Snap
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $orderId,
-                    'gross_amount' => $grossAmount,
-                ],
-                'customer_details' => [
-                    'first_name' => $user->name ?? 'Guest',
-                    'email' => $user->email ?? 'guest@example.com',
-                ],
-            ];
+        } catch (Exception $e) {
+            Log::error('MIDTRANS ERROR: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
             
-            Log::info("Requesting Snap Token...");
-            $snapToken = Snap::getSnapToken($params);
-            Log::info("Snap Token Obtained: " . $snapToken);
-
             return response()->json([
-                'token' => $snapToken, 
-                'order_id' => $orderId
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error("PAYMENT ERROR: " . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+                'message' => 'Payment initiation failed',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
     public function handleNotification(Request $request)
     {
-        Config::$serverKey = config('services.midtrans.server_key');
-        Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
-
-        try {
-            $notif = new \Midtrans\Notification();
-            $transaction = $notif->transaction_status;
-            $order_id = $notif->order_id;
-            
-            Log::info("Webhook Received: " . $order_id . " Status: " . $transaction);
-
-            $localTransaction = \App\Models\Transaction::where('order_id', $order_id)->first();
-            if ($localTransaction) {
-                DB::transaction(function () use ($transaction, $localTransaction) {
-                    if ($transaction == 'settlement' || $transaction == 'capture') {
-                        $localTransaction->update(['status' => 'success']);
-                        \App\Models\Product::where('id', $localTransaction->product_id)->update(['status' => 'sold']);
-                    } else if (in_array($transaction, ['deny', 'expire', 'cancel'])) {
-                        $localTransaction->update(['status' => 'failed']);
-                    }
-                });
-            }
-            return response()->json(['message' => 'OK']);
-        } catch (\Exception $e) {
-            Log::error("Webhook Error: " . $e->getMessage());
-            return response()->json(['message' => 'Error'], 500);
-        }
+        Log::info('Midtrans Notification received', $request->all());
+        // Logika verifikasi status transaksi disini...
+        return response()->json(['status' => 'ok']);
     }
 }
