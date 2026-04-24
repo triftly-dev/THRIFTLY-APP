@@ -17,13 +17,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        // Akun Admin
-        User::factory()->create([
-            'name' => 'Admin Secondnesia',
-            'email' => 'admin@secondnesia.com',
-            'password' => bcrypt('password123'),
-            'role' => 'admin',
-        ]);
+        // Akun Admin Utama
+        User::updateOrCreate(
+            ['email' => 'admin@thriftly.my.id'],
+            [
+                'name' => 'Thriftly Admin',
+                'password' => bcrypt('admin123'),
+                'role' => 'admin',
+            ]
+        );
 
         // Akun User Terpadu (Satu akun untuk fitur Buyer sekaligus Seller)
         $user = User::factory()->create([
