@@ -15,9 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/*', 
         ]);
-
-        // Paksa Header CORS agar localhost:5173 bisa akses VPS
-        $middleware->append(\App\Http\Middleware\ForceCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
