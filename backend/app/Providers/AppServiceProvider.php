@@ -19,5 +19,10 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.env') !== 'local') {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        // Definisikan Gate Admin
+        \Illuminate\Support\Facades\Gate::define('admin', function ($user) {
+            return $user->role === 'admin';
+        });
     }
 }
