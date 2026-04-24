@@ -16,13 +16,15 @@ class PaymentController extends Controller
     {
         try {
             $serverKey = config('services.midtrans.server_key');
+            // Bersihkan kunci dari spasi atau karakter aneh (hanya ambil alfanumerik dan dash/underscore)
+            $serverKey = preg_replace('/[^a-zA-Z0-9\-_]/', '', $serverKey);
             
             if (!$serverKey) {
                 throw new Exception('MIDTRANS_SERVER_KEY tidak ditemukan di file .env atau config VPS');
             }
 
-            Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 5) . '...');
-            \Midtrans\Config::$serverKey = trim($serverKey);
+            Log::info('Step 1: Init Midtrans Config with Clean Key: ' . substr($serverKey, 0, 7) . '... Length: ' . strlen($serverKey));
+            \Midtrans\Config::$serverKey = $serverKey;
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
