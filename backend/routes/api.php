@@ -4,17 +4,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // JALUR TIKUS: Respon paksa untuk tes koneksi
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: *');
-header('Access-Control-Allow-Headers: *');
+if (isset($_SERVER['REQUEST_METHOD'])) {
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: *');
+    header('Access-Control-Allow-Headers: *');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit;
-}
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit;
+    }
 
-if (strpos($_SERVER['REQUEST_URI'], 'payment/token') !== false) {
-    echo json_encode(['message' => 'KONEKSI TEMBUS KE API.PHP', 'status' => 'success']);
-    exit;
+    if (strpos($_SERVER['REQUEST_URI'] ?? '', 'payment/token') !== false) {
+        echo json_encode(['message' => 'KONEKSI TEMBUS KE API.PHP', 'status' => 'success']);
+        exit;
+    }
 }
 
 use App\Http\Controllers\ProductController;
