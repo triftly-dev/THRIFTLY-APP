@@ -42,13 +42,16 @@ export const userService = {
     return users.find(user => user.email.toLowerCase() === email.toLowerCase())
   },
 
-  createUser(userData) {
-    const users = this.getAllUsers()
+  async createUser(userData) {
+    const users = await this.getAllUsers()
     
-    if (this.getUserByEmail(userData.email)) {
+    const existingUser = await this.getUserByEmail(userData.email)
+    if (existingUser) {
       throw new Error('Email sudah terdaftar')
     }
 
+    // Catatan: Pembuatan user idealnya via API. 
+    // Bagian ini masih menggunakan localStorage sebagai fallback jika dibutuhkan.
     const newUser = {
       id: generateId(),
       email: userData.email,
@@ -77,8 +80,8 @@ export const userService = {
     return newUser
   },
 
-  updateUser(id, updates) {
-    const users = this.getAllUsers()
+  async updateUser(id, updates) {
+    const users = await this.getAllUsers()
     const index = users.findIndex(user => user.id === id)
     
     if (index === -1) {
@@ -95,8 +98,8 @@ export const userService = {
     return users[index]
   },
 
-  updateProfile(id, profileData) {
-    const users = this.getAllUsers()
+  async updateProfile(id, profileData) {
+    const users = await this.getAllUsers()
     const index = users.findIndex(user => user.id === id)
     
     if (index === -1) {
@@ -113,8 +116,8 @@ export const userService = {
     return users[index]
   },
 
-  updateSaldo(id, saldoData) {
-    const users = this.getAllUsers()
+  async updateSaldo(id, saldoData) {
+    const users = await this.getAllUsers()
     const index = users.findIndex(user => user.id === id)
     
     if (index === -1) {
@@ -131,14 +134,14 @@ export const userService = {
     return users[index]
   },
 
-  login(email, password) {
-    const user = this.getUserByEmail(email)
+  async login(email, password) {
+    const user = await this.getUserByEmail(email)
     
     if (!user) {
       throw new Error('Email atau password salah')
     }
 
-    if (!verifyPassword(password, user.password)) {
+    if (user.password && !verifyPassword(password, user.password)) {
       throw new Error('Email atau password salah')
     }
 
@@ -161,10 +164,11 @@ export const userService = {
     return !!this.getCurrentUser()
   },
 
-  deleteUser(id) {
-    const users = this.getAllUsers()
+  async deleteUser(id) {
+    const users = await this.getAllUsers()
     const filtered = users.filter(user => user.id !== id)
     storage.set(STORAGE_KEYS.USERS, filtered)
     return true
   }
 }
+
