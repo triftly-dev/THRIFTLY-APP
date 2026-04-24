@@ -37,6 +37,7 @@ class PaymentController extends Controller
 
             return response()->json([
                 'token' => $snapToken,
+                'snap_token' => $snapToken,
                 'order_id' => 'TEST-' . time()
             ]);
 
