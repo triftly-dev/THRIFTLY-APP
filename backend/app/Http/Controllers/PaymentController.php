@@ -22,7 +22,7 @@ class PaymentController extends Controller
             }
 
             Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 5) . '...');
-            \Midtrans\Config::$serverKey = $serverKey;
+            \Midtrans\Config::$serverKey = trim($serverKey);
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
