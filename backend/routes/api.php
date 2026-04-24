@@ -1,9 +1,5 @@
 <?php
 
-Route::get('/test-api', function() {
-    return response()->json(['message' => 'API is working!']);
-});
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -12,41 +8,51 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MessageController;
 
-// Public Routes
+/*
+|--------------------------------------------------------------------------
+| Public Routes (Akses Tanpa Login)
+|--------------------------------------------------------------------------
+*/
+Route::get('/test-api', function() { return response()->json(['message' => 'API is working!']); });
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
-// Protected Routes
+/*
+|--------------------------------------------------------------------------
+| Protected Routes (Wajib Login)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth & Profile
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+
+    // --- FITUR UMUM (Buyer & Seller) ---
+    Route::get('/user', function (Request $request) { return $request->user(); });
     Route::put('/user/profile', [UserController::class, 'update']);
-    Route::get('/users', [UserController::class, 'index']); 
+    Route::get('/users', [UserController::class, 'index']); // List user untuk chat
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Payments
-    Route::post('/payment/token', [PaymentController::class, 'createPayment']);
-    Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
-
-    // Chat / Messages
+    // --- FITUR CHAT ---
     Route::get('/messages/{receiverId}', [MessageController::class, 'index']);
     Route::post('/messages', [MessageController::class, 'store']);
 
-    // Admin Only Routes
-    Route::middleware('can:admin')->group(function () {
-        Route::get('/admin/products', [ProductController::class, 'adminIndex']);
-        Route::put('/admin/products/{id}/approve', [ProductController::class, 'approve']);
-        Route::put('/admin/products/{id}/reject', [ProductController::class, 'reject']);
-    });
+    // --- FITUR PEMBAYARAN (Buyer) ---
+    Route::post('/payment/token', [PaymentController::class, 'createPayment']);
+    Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
 
-    // Product management (Seller/Admin)
+    // --- FITUR PENJUALAN (Seller) ---
     Route::get('/my-products', [ProductController::class, 'myProducts']);
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
     Route::post('/products/{id}/sold', [ProductController::class, 'sold']);
+
+    // --- FITUR KHUSUS ADMIN ---
+    Route::middleware('can:admin')->group(function () {
+        Route::get('/admin/products', [ProductController::class, 'adminIndex']);
+        Route::put('/admin/products/{id}/approve', [ProductController::class, 'approve']);
+        Route::put('/admin/products/{id}/reject', [ProductController::class, 'reject']);
+        Route::delete('/admin/users/{id}', [UserController::class, 'destroy']); // Contoh fitur admin delete user
+    });
+
 });
