@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+\Illuminate\Support\Facades\Log::info("API Route Hit: " . request()->fullUrl());
 
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
