@@ -31,12 +31,26 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 
-// Protected Product Routes (Seller)
+// Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Admin Routes
+    Route::middleware('can:admin')->group(function () {
+        Route::get('/admin/products', [ProductController::class, 'adminIndex']);
+        Route::put('/admin/products/{id}/approve', [ProductController::class, 'approve']);
+        Route::put('/admin/products/{id}/reject', [ProductController::class, 'reject']);
+        Route::get('/users', [\App\Http\Controllers\UserController::class, 'index']);
+    });
+
+    // Seller & Buyer Shared Protected Routes
     Route::get('/my-products', [ProductController::class, 'myProducts']);
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{id}', [ProductController::class, 'update']);
     Route::put('/products/{id}/sold', [ProductController::class, 'sold']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+    // logout
     Route::post('/logout', [AuthController::class, 'logout']);
 });
+
+// Midtrans Payment Routes (Public for Testing)
+Route::post('/payment/token', [\App\Http\Controllers\PaymentController::class, 'createPayment']);
+Route::post('/payment/notification', [\App\Http\Controllers\PaymentController::class, 'handleNotification']);
