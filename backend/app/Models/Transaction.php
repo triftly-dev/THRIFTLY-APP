@@ -12,9 +12,14 @@ class Transaction extends Model
     protected $fillable = [
         'order_id',
         'product_id',
-        'user_id',
-        'amount',
+        'buyer_id',
+        'seller_id',
+        'harga_final',
+        'ongkir',
         'status',
+        'alamat_pengiriman',
+        'video_packing',
+        'video_unboxing',
     ];
 
     public function product()
