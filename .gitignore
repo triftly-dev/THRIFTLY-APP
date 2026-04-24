@@ -23,12 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Repositori khusus Frontend
-backend/
+# Repositori ini sekarang khusus untuk backend, 
+# jadi kita biarkan folder backend tidak diabaikan.
+# Folder frontend dan key tetap diabaikan.
 frontend/
 aws laravel key/
-
 *.rar
 .env
 .env.production
-
