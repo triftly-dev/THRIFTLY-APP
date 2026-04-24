@@ -10,8 +10,7 @@ class PaymentController extends Controller
 {
     public function createPayment(Request $request)
     {
-        die("LOG: BERHASIL MASUK KE CONTROLLER PAYMENT");
-        // 1. Validasi Input agar Aman
+        // 1. Validasi Input
         $request->validate([
             'product_id' => 'required|exists:products,id',
             'price' => 'required|numeric|min:1',
@@ -23,18 +22,14 @@ class PaymentController extends Controller
         Config::$clientKey = config('services.midtrans.client_key');
         Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
 
-        // DEBUG: Cek apakah key terbaca (Ini akan muncul di storage/logs/laravel.log)
-        \Illuminate\Support\Facades\Log::info("Midtrans Server Key: " . (Config::$serverKey ? 'Terdeteksi (' . substr(Config::$serverKey, 0, 10) . '...)' : 'NULL!'));
         Config::$isSanitized = true;
         Config::$is3ds = true;
 
         $grossAmount = (int) $request->price;
         $orderId = 'TRX-' . time() . '-' . rand(1000, 9999);
-
-        // Ambil data user dengan aman
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        // 2. SIMPAN KE DATABASE (Pake Transaction agar Aman)
+        // 2. SIMPAN KE DATABASE
         try {
             \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $request, $grossAmount, $user) {
                 \App\Models\Transaction::create([
@@ -49,6 +44,9 @@ class PaymentController extends Controller
                 ]);
             });
 
+            // --- JIKA SAMPAI SINI BERARTI DATABASE AMAN ---
+            die("LOG: DATABASE SUDAH TERSIMPAN (Masalah mungkin ada di Snap Token)");
+
             $params = [
                 'transaction_details' => [
                     'order_id' => $orderId,
@@ -58,14 +56,6 @@ class PaymentController extends Controller
                     'first_name' => $user->name ?? 'Guest',
                     'email' => $user->email ?? 'guest@example.com',
                 ],
-                'item_details' => [
-                    [
-                        'id' => $request->product_id,
-                        'price' => $grossAmount,
-                        'quantity' => 1,
-                        'name' => $request->product_name ?? 'Barang Secondnesia',
-                    ]
-                ]
             ];
 
             $snapToken = Snap::getSnapToken($params);
@@ -93,40 +83,29 @@ class PaymentController extends Controller
         $gross_amount = $notif->gross_amount;
         $server_key = config('services.midtrans.server_key');
 
-        // 1. VALIDASI SIGNATURE
         $signature = hash("sha512", $order_id . $status_code . $gross_amount . $server_key);
         if ($signature !== $notif->signature_key) {
             return response()->json(['message' => 'Invalid Signature'], 403);
         }
 
-        // 2. CARI TRANSAKSI
         $localTransaction = \App\Models\Transaction::where('order_id', $order_id)->first();
 
         if (!$localTransaction) {
             return response()->json(['message' => 'Transaction not found'], 404);
         }
 
-        // 3. GUARD: CEK APAKAH SUDAH PERNAH DIPROSES (Mencegah Double Update)
         if ($localTransaction->status === 'success') {
             return response()->json(['message' => 'Transaction already processed']);
         }
 
-        // 4. ATOMIC UPDATE (Pakai DB Transaction)
         try {
-            \Illuminate\Support\Facades\DB::transaction(function () use ($transaction, $localTransaction, $order_id) {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($transaction, $localTransaction) {
                 if ($transaction == 'settlement' || $transaction == 'capture') {
-                    
-                    // Update Status Transaksi
                     $localTransaction->update(['status' => 'success']);
-
-                    // Update Produk
                     \App\Models\Product::where('id', $localTransaction->product_id)->update([
                         'status' => 'sold',
                         'stock' => 0
                     ]);
-
-                    \Illuminate\Support\Facades\Log::info("Payment Success Atomic: " . $order_id);
-
                 } else if ($transaction == 'deny' || $transaction == 'expire' || $transaction == 'cancel') {
                     $localTransaction->update(['status' => 'failed']);
                 }
@@ -135,7 +114,6 @@ class PaymentController extends Controller
             return response()->json(['message' => 'OK']);
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Webhook Error: " . $e->getMessage());
             return response()->json(['message' => 'Server Error'], 500);
         }
     }
