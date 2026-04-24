@@ -25,6 +25,7 @@ class PaymentController extends Controller
 
             Log::info('Step 1: Init Midtrans Config with Clean Key: ' . substr($serverKey, 0, 7) . '... Length: ' . strlen($serverKey));
             \Midtrans\Config::$serverKey = $serverKey;
+            \Midtrans\Config::$merchantId = config('services.midtrans.merchant_id');
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
