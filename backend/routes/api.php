@@ -39,8 +39,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- FITUR PEMBAYARAN (Buyer) ---
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
-    Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
+});
 
+// Link Laporan Midtrans (Wajib di LUAR middleware auth karena dipanggil server Midtrans)
+Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
+
+Route::middleware('auth:sanctum')->group(function () {
     // --- FITUR PENJUALAN (Seller) ---
     Route::get('/my-products', [ProductController::class, 'myProducts']);
     Route::post('/products', [ProductController::class, 'store']);
