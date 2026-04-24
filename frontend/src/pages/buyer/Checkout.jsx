@@ -57,12 +57,8 @@ const Checkout = () => {
 
         setProduct(p)
         
-        try {
-            const s = await userService.getUserById(p.sellerId || p.user_id)
-            setSeller(s || p.seller) // Gunakan fallback p.seller
-        } catch(e) {
-            setSeller(p.seller)
-        }
+        // Langsung gunakan data seller dari objek produk (stop error 403)
+        setSeller(p.seller)
       } catch (error) {
         toast.error('Gagal memuat data')
       } finally {
@@ -85,7 +81,7 @@ const Checkout = () => {
     try {
       const ongkir = ongkirDitanggung === 'buyer' ? shippingRates[shippingOption] : 0
       
-      const transaction = transactionService.createTransaction({
+      const transaction = await transactionService.createTransaction({
         productId: product.id,
         buyerId: user.id,
         sellerId: product.sellerId || product.user_id,

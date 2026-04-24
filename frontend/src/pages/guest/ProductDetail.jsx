@@ -46,13 +46,8 @@ const ProductDetail = () => {
 
         setProduct(p)
         
-        let s = null;
-        try {
-          s = await userService.getUserById(p.sellerId || p.user_id)
-        } catch(e) {}
-        
-        // Gunakan data seller dari produk jika fetch user gagal (misal: bukan admin)
-        setSeller(s || p.seller)
+        // Langsung gunakan data seller dari objek produk (lebih efisien & stop error 403)
+        setSeller(p.seller)
       } catch (err) {
         toast.error('Gagal mengambil data produk')
         navigate('/products')

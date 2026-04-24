@@ -23,7 +23,7 @@ export const transactionService = {
     return transactions.filter(transaction => transaction.sellerId === sellerId)
   },
 
-  createTransaction(transactionData) {
+  async createTransaction(transactionData) {
     const transactions = this.getAllTransactions()
 
     const newTransaction = {
@@ -47,21 +47,18 @@ export const transactionService = {
     transactions.push(newTransaction)
     storage.set(STORAGE_KEYS.TRANSACTIONS, transactions)
 
-    productService.markAsSold(transactionData.productId)
-
+    // Update status produk menjadi terjual di server
     try {
-      const seller = userService.getUserById(transactionData.sellerId)
-      if (seller) {
-        userService.updateSaldo(transactionData.sellerId, {
-          ketahan: (seller.saldo?.ketahan || 0) + transactionData.hargaFinal
-        })
-      }
+      await productService.markAsSold(transactionData.productId)
     } catch (e) {
-      console.warn("Legacy saldo update skipped.");
+      console.warn("Gagal mengubah status produk di server, tapi transaksi tetap dicatat lokal.")
     }
 
+    // Catatan: Update saldo penjual SEHARUSNYA dilakukan oleh backend.
+    // Di sini kita abaikan karena buyer tidak punya akses 403 ke saldo seller.
     return newTransaction
   },
+
 
   updateTransaction(id, updates) {
     const transactions = this.getAllTransactions()
@@ -112,7 +109,7 @@ export const transactionService = {
     return transactions[index]
   },
 
-  markAsCompleted(id) {
+  async markAsCompleted(id) {
     const transactions = this.getAllTransactions()
     const index = transactions.findIndex(transaction => transaction.id === id)
     
@@ -126,24 +123,10 @@ export const transactionService = {
 
     storage.set(STORAGE_KEYS.TRANSACTIONS, transactions)
 
-    try {
-      const seller = userService.getUserById(transaction.sellerId)
-      // Since seller is a Promise, this will gracefully bypass or fail inside updateSaldo without breaking the main app
-      if (seller) {
-        const newKetahan = (seller.saldo?.ketahan || 0) - transaction.hargaFinal
-        const newBisaDitarik = (seller.saldo?.bisaDitarik || 0) + transaction.hargaFinal
-        
-        userService.updateSaldo(transaction.sellerId, {
-          ketahan: Math.max(0, newKetahan),
-          bisaDitarik: newBisaDitarik
-        })
-      }
-    } catch(e) {
-      console.warn("Legacy saldo update on completion skipped.", e)
-    }
-
+    // Saldo update di sini juga kita abaikan di sisi client untuk menghindari 403
     return transactions[index]
   },
+
 
   markAsRetur(id, videoUnboxing = '') {
     const transactions = this.getAllTransactions()

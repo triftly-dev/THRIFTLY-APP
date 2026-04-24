@@ -1,0 +1,1 @@
+ssh -i laravel-key.pem ubuntu@13.211.219.19

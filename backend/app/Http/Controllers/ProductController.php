@@ -92,12 +92,28 @@ class ProductController extends Controller
 
     public function sold($id)
     {
-        $product = Product::findOrFail($id);
-        $product->update([
-            'status' => 'sold',
-            'stock' => 0
-        ]);
-        return response()->json(['message' => 'Product marked as sold and stock depleted!']);
+        try {
+            $product = \App\Models\Product::findOrFail($id);
+            
+            // Log untuk memastikan data ditemukan
+            \Illuminate\Support\Facades\Log::info("Mencoba menandai terjual produk ID: " . $id);
+
+            $product->update([
+                'status' => 'sold',
+                'stock' => 0
+            ]);
+
+            return response()->json([
+                'message' => 'Product marked as sold!',
+                'product' => $product
+            ]);
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Gagal menandai terjual: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Error backend: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function approve(Request $request, $id)

@@ -81,11 +81,29 @@ export const userService = {
   },
 
   async updateUser(id, updates) {
+    const currentUser = this.getCurrentUser()
+    
+    // Jika yang di-update adalah diri sendiri, langsung update localStorage
+    if (currentUser && String(currentUser.id) === String(id)) {
+      const updatedUser = { ...currentUser, ...updates, updatedAt: new Date().toISOString() }
+      storage.set(STORAGE_KEYS.CURRENT_USER, updatedUser)
+      
+      // Update juga di list users (jika ada di local)
+      const users = storage.get(STORAGE_KEYS.USERS) || []
+      const index = users.findIndex(u => String(u.id) === String(id))
+      if (index !== -1) {
+        users[index] = updatedUser
+        storage.set(STORAGE_KEYS.USERS, users)
+      }
+      return updatedUser
+    }
+
+    // Jika admin mengupdate user lain (butuh akses khusus)
     const users = await this.getAllUsers()
-    const index = users.findIndex(user => user.id === id)
+    const index = users.findIndex(user => String(user.id) === String(id))
     
     if (index === -1) {
-      throw new Error('User tidak ditemukan')
+      throw new Error('User tidak ditemukan atau akses terbatas')
     }
 
     users[index] = {
@@ -99,11 +117,23 @@ export const userService = {
   },
 
   async updateProfile(id, profileData) {
+    const currentUser = this.getCurrentUser()
+    
+    if (currentUser && String(currentUser.id) === String(id)) {
+      const updatedUser = { 
+        ...currentUser, 
+        profile: { ...currentUser.profile, ...profileData },
+        updatedAt: new Date().toISOString() 
+      }
+      storage.set(STORAGE_KEYS.CURRENT_USER, updatedUser)
+      return updatedUser
+    }
+
     const users = await this.getAllUsers()
-    const index = users.findIndex(user => user.id === id)
+    const index = users.findIndex(user => String(user.id) === String(id))
     
     if (index === -1) {
-      throw new Error('User tidak ditemukan')
+      throw new Error('User tidak ditemukan atau akses terbatas')
     }
 
     users[index].profile = {
@@ -117,11 +147,23 @@ export const userService = {
   },
 
   async updateSaldo(id, saldoData) {
+    const currentUser = this.getCurrentUser()
+    
+    if (currentUser && String(currentUser.id) === String(id)) {
+      const updatedUser = { 
+        ...currentUser, 
+        saldo: { ...currentUser.saldo, ...saldoData },
+        updatedAt: new Date().toISOString() 
+      }
+      storage.set(STORAGE_KEYS.CURRENT_USER, updatedUser)
+      return updatedUser
+    }
+
     const users = await this.getAllUsers()
-    const index = users.findIndex(user => user.id === id)
+    const index = users.findIndex(user => String(user.id) === String(id))
     
     if (index === -1) {
-      throw new Error('User tidak ditemukan')
+      throw new Error('User tidak ditemukan atau akses terbatas')
     }
 
     users[index].saldo = {
@@ -133,6 +175,7 @@ export const userService = {
     storage.set(STORAGE_KEYS.USERS, users)
     return users[index]
   },
+
 
   async login(email, password) {
     const user = await this.getUserByEmail(email)
