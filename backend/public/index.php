@@ -1,7 +1,5 @@
 <?php
 
-die("KONFIRMASI: INI ADALAH SERVER DAN FOLDER YANG BENAR");
-
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

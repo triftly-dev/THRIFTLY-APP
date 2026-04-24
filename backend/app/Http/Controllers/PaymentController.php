@@ -10,6 +10,7 @@ class PaymentController extends Controller
 {
     public function createPayment(Request $request)
     {
+        die("LOG: BERHASIL MASUK KE CONTROLLER PAYMENT");
         // 1. Validasi Input agar Aman
         $request->validate([
             'product_id' => 'required|exists:products,id',
