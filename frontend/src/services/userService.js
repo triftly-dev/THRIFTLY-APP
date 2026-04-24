@@ -12,22 +12,33 @@ export const userService = {
         createdAt: user.created_at,
         profile: {
           nama: user.name,
-          lokasi: 'N/A' // Placeholder since we don't store location on basic users yet
+          lokasi: user.lokasi || 'N/A'
         }
       }))
     } catch (error) {
+      if (error.response?.status === 403) {
+        console.warn('Access to user list denied (Admin only). Returning empty list.')
+        return []
+      }
       console.error('Error fetching users:', error)
       return []
     }
   },
 
   async getUserById(id) {
-    const users = await this.getAllUsers()
-    return users.find(user => String(user.id) === String(id))
+    if (!id) return null
+    try {
+      const users = await this.getAllUsers()
+      if (!users || users.length === 0) return null
+      return users.find(user => String(user.id) === String(id))
+    } catch (error) {
+      return null
+    }
   },
 
-  getUserByEmail(email) {
-    const users = this.getAllUsers()
+  async getUserByEmail(email) {
+    if (!email) return null
+    const users = await this.getAllUsers()
     return users.find(user => user.email.toLowerCase() === email.toLowerCase())
   },
 
