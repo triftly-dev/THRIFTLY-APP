@@ -36,7 +36,7 @@ class PaymentController extends Controller
             Log::info('Step 4: Success! Token: ' . $snapToken);
 
             return response()->json([
-                'snap_token' => $snapToken,
+                'token' => $snapToken,
                 'order_id' => 'TEST-' . time()
             ]);
 

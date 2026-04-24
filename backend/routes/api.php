@@ -27,8 +27,9 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
 
     // --- FITUR UMUM (Buyer & Seller) ---
+    // Auth & Profile
     Route::get('/user', function (Request $request) { return $request->user(); });
-    Route::put('/user/profile', [UserController::class, 'update']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::get('/users', [UserController::class, 'index']); // List user untuk chat
     Route::post('/logout', [AuthController::class, 'logout']);
 
