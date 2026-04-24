@@ -13,10 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'api/payment/notification'
+            'api/payment/notification',
+            'api/payment/token'
         ]);
 
-        $middleware->statefulApi(); // Penting untuk Sanctum/API
+        // $middleware->statefulApi(); // Di-disable sementara untuk testing
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
