@@ -18,9 +18,9 @@ class PaymentController extends Controller
             'seller_id' => 'required'
         ]);
 
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$clientKey = env('MIDTRANS_CLIENT_KEY');
-        Config::$isProduction = filter_var(env('MIDTRANS_IS_PRODUCTION', false), FILTER_VALIDATE_BOOLEAN);
+        Config::$serverKey = config('services.midtrans.server_key');
+        Config::$clientKey = config('services.midtrans.client_key');
+        Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
         Config::$isSanitized = true;
         Config::$is3ds = true;
 
@@ -74,8 +74,8 @@ class PaymentController extends Controller
 
     public function handleNotification(Request $request)
     {
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        Config::$isProduction = env('MIDTRANS_IS_PRODUCTION', false);
+        Config::$serverKey = config('services.midtrans.server_key');
+        Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
 
         try {
             $notif = new \Midtrans\Notification();
@@ -87,7 +87,7 @@ class PaymentController extends Controller
         $order_id = $notif->order_id;
         $status_code = $notif->status_code;
         $gross_amount = $notif->gross_amount;
-        $server_key = env('MIDTRANS_SERVER_KEY');
+        $server_key = config('services.midtrans.server_key');
 
         // 1. VALIDASI SIGNATURE
         $signature = hash("sha512", $order_id . $status_code . $gross_amount . $server_key);
