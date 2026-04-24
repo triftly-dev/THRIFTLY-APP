@@ -2,27 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-// JALUR TIKUS: Respon paksa untuk tes koneksi
-if (isset($_SERVER['REQUEST_METHOD'])) {
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: *');
-    header('Access-Control-Allow-Headers: *');
-
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        exit;
-    }
-
-    if (strpos($_SERVER['REQUEST_URI'] ?? '', 'payment/token') !== false) {
-        echo json_encode(['message' => 'KONEKSI TEMBUS KE API.PHP', 'status' => 'success']);
-        exit;
-    }
-}
-
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentController;
+
+// Log setiap request yang masuk
+Log::info("API Request: " . request()->method() . " " . request()->fullUrl());
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -37,5 +24,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
+// Midtrans Payment Routes
 Route::post('/payment/token', [PaymentController::class, 'createPayment']);
 Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
