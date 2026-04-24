@@ -9,77 +9,58 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Exception;
-use Midtrans\Config;
-use Midtrans\Snap;
 
 class PaymentController extends Controller
 {
-    public function __construct()
-    {
-        // Konfigurasi Midtrans
-        Config::$serverKey = config('services.midtrans.server_key');
-        Config::$isProduction = config('services.midtrans.is_production');
-        Config::$isSanitized = true;
-        Config::$is3ds = true;
-    }
-
     public function createPayment(Request $request)
     {
         try {
-            Log::info('--- PROSES PAYMENT DIMULAI ---', $request->all());
+            Log::info('--- MEMULAI PEMBAYARAN ---');
+
+            // Cek apakah class Midtrans ada
+            if (!class_exists('\Midtrans\Config')) {
+                throw new Exception('Library Midtrans tidak ditemukan. Jalankan "composer require midtrans/midtrans-php"');
+            }
+
+            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+            \Midtrans\Config::$isSanitized = true;
+            \Midtrans\Config::$is3ds = true;
 
             $product = Product::find($request->product_id);
             if (!$product) {
-                Log::error('Produk tidak ditemukan ID: ' . $request->product_id);
-                return response()->json(['message' => 'Product not found'], 404);
+                return response()->json(['message' => 'Produk tidak ditemukan'], 404);
             }
 
-            // Gunakan ID user 1 jika tidak login (untuk testing) atau ambil dari auth
-            $userId = Auth::check() ? Auth::id() : 1;
+            $userId = Auth::id() ?: 1; // Default ke 1 jika tidak login untuk testing
 
             return DB::transaction(function () use ($product, $userId, $request) {
-                // 1. Buat record transaksi
                 $transaction = Transaction::create([
                     'order_id' => 'TRX-' . time() . '-' . $userId,
                     'buyer_id' => $userId,
-                    'seller_id' => $product->user_id, // Ambil pemilik produk
+                    'seller_id' => $product->user_id,
                     'product_id' => $product->id,
-                    'harga_final' => $request->amount,
+                    'harga_final' => (int)$request->amount,
                     'ongkir' => 0,
                     'status' => 'pending',
-                    'payment_method' => 'midtrans'
+                    'payment_method' => 'midtrans',
+                    'alamat_pengiriman' => 'Alamat Testing' // Beri default agar tidak error database
                 ]);
 
-                Log::info('Transaction Created: ' . $transaction->order_id);
-
-                // 2. Siapkan Parameter Midtrans
                 $params = [
                     'transaction_details' => [
                         'order_id' => $transaction->order_id,
                         'gross_amount' => (int)$request->amount,
                     ],
                     'customer_details' => [
-                        'first_name' => Auth::check() ? Auth::user()->name : 'Guest User',
+                        'first_name' => Auth::check() ? Auth::user()->name : 'Guest',
                         'email' => Auth::check() ? Auth::user()->email : 'guest@example.com',
                     ],
-                    'item_details' => [
-                        [
-                            'id' => $product->id,
-                            'price' => (int)$request->amount,
-                            'quantity' => 1,
-                            'name' => substr($product->name, 0, 50),
-                        ]
-                    ]
                 ];
 
-                Log::info('Calling Midtrans Snap...');
-                
-                $snapToken = Snap::getSnapToken($params);
-                
-                Log::info('Snap Token Received: ' . $snapToken);
+                $snapToken = \Midtrans\Snap::getSnapToken($params);
 
-                $transaction->snap_token = $snapToken;
-                $transaction->save();
+                $transaction->update(['snap_token' => $snapToken]);
 
                 return response()->json([
                     'snap_token' => $snapToken,
@@ -88,11 +69,9 @@ class PaymentController extends Controller
             });
 
         } catch (Exception $e) {
-            Log::error('MIDTRANS ERROR: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            
+            Log::error('CRITICAL ERROR PAYMENT: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Payment initiation failed',
+                'message' => 'Gagal memproses pembayaran',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -100,8 +79,7 @@ class PaymentController extends Controller
 
     public function handleNotification(Request $request)
     {
-        Log::info('Midtrans Notification received', $request->all());
-        // Logika verifikasi status transaksi disini...
+        Log::info('Midtrans Webhook', $request->all());
         return response()->json(['status' => 'ok']);
     }
 }
