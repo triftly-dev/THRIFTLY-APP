@@ -34,6 +34,19 @@ class PaymentController extends Controller
         return response()->json($transactions);
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $transaction = Transaction::findOrFail($id);
+        
+        $transaction->update([
+            'status' => $request->status,
+            'video_packing' => $request->video_packing ?? $transaction->video_packing,
+            'video_unboxing' => $request->video_unboxing ?? $transaction->video_unboxing,
+        ]);
+
+        return response()->json($transaction);
+    }
+
     public function createPayment(Request $request)
     {
         try {

@@ -37,9 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages/{receiverId}', [MessageController::class, 'index']);
     Route::post('/messages', [MessageController::class, 'store']);
 
-    // --- FITUR PEMBAYARAN (Buyer) ---
     Route::get('/transactions', [PaymentController::class, 'index']);
     Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
+    Route::patch('/transactions/{id}/status', [PaymentController::class, 'updateStatus']);
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
 });
 
