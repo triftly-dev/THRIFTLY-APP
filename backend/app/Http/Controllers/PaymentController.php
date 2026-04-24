@@ -21,6 +21,9 @@ class PaymentController extends Controller
         Config::$serverKey = config('services.midtrans.server_key');
         Config::$clientKey = config('services.midtrans.client_key');
         Config::$isProduction = filter_var(config('services.midtrans.is_production'), FILTER_VALIDATE_BOOLEAN);
+
+        // DEBUG: Cek apakah key terbaca (Ini akan muncul di storage/logs/laravel.log)
+        \Illuminate\Support\Facades\Log::info("Midtrans Server Key: " . (Config::$serverKey ? 'Terdeteksi (' . substr(Config::$serverKey, 0, 10) . '...)' : 'NULL!'));
         Config::$isSanitized = true;
         Config::$is3ds = true;
 
