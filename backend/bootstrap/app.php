@@ -13,11 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'api/*', // Bebaskan semua API dari CSRF untuk sementara agar lancar
+            'api/*', 
         ]);
 
-        // Non-aktifkan statefulApi karena frontend & backend beda domain (localhost vs thriftly.my.id)
-        // Gunakan Bearer Token saja di header.
+        // Paksa Header CORS agar localhost:5173 bisa akses VPS
+        $middleware->append(\App\Http\Middleware\ForceCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
