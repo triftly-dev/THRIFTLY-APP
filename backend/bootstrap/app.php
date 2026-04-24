@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/payment/token'
         ]);
 
-        // $middleware->statefulApi(); // Di-disable sementara untuk testing
+        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
