@@ -11,6 +11,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// TES LOG LANGSUNG: Jika ini tidak muncul di tail, berarti kita cek file log yang salah!
+file_put_contents(__DIR__.'/../storage/logs/laravel.log', '['.date('Y-m-d H:i:s').'] DEBUG: REQUEST MASUK KE INDEX.PHP'."\n", FILE_APPEND);
+
 define('LARAVEL_START', microtime(true));
 
 require __DIR__.'/../vendor/autoload.php';
