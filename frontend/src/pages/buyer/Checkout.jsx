@@ -59,8 +59,10 @@ const Checkout = () => {
         
         try {
             const s = await userService.getUserById(p.sellerId || p.user_id)
-            setSeller(s)
-        } catch(e) {}
+            setSeller(s || p.seller) // Gunakan fallback p.seller
+        } catch(e) {
+            setSeller(p.seller)
+        }
       } catch (error) {
         toast.error('Gagal memuat data')
       } finally {
