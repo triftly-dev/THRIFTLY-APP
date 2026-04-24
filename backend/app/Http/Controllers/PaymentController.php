@@ -10,10 +10,12 @@ class PaymentController extends Controller
 {
     public function createPayment(Request $request)
     {
-        // 1. Validasi Input agar Aman (ditambah exists check)
+        // 1. Validasi Input agar Aman
         $request->validate([
             'product_id' => 'required|exists:products,id',
             'price' => 'required|numeric|min:1',
+            'alamat_pengiriman' => 'required',
+            'seller_id' => 'required'
         ]);
 
         Config::$serverKey = env('MIDTRANS_SERVER_KEY');
@@ -33,9 +35,12 @@ class PaymentController extends Controller
                 \App\Models\Transaction::create([
                     'order_id' => $orderId,
                     'product_id' => $request->product_id,
-                    'amount' => $grossAmount,
+                    'buyer_id' => $user->id ?? 1,
+                    'seller_id' => $request->seller_id,
+                    'harga_final' => $grossAmount,
+                    'ongkir' => $request->ongkir ?? 0,
                     'status' => 'pending',
-                    'user_id' => $user->id ?? 1,
+                    'alamat_pengiriman' => $request->alamat_pengiriman
                 ]);
             });
 
