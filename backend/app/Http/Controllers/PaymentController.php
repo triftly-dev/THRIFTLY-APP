@@ -16,34 +16,51 @@ class PaymentController extends Controller
     {
         try {
             $serverKey = trim(config('services.midtrans.server_key'));
-            
-            if (!$serverKey) {
-                throw new Exception('MIDTRANS_SERVER_KEY tidak ditemukan di file .env');
-            }
-
-            Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 7) . '...' . substr($serverKey, -4) . ' Length: ' . strlen($serverKey));
             \Midtrans\Config::$serverKey = $serverKey;
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
 
+            // 1. Simpan Transaksi ke Database dulu (PENTING!)
+            $orderId = 'ORDER-' . time() . '-' . ($request->product_id ?? '1');
+            
+            $transaction = Transaction::create([
+                'order_id' => $orderId,
+                'product_id' => $request->product_id,
+                'buyer_id' => Auth::id(),
+                'seller_id' => $request->seller_id,
+                'harga_final' => $request->price ?? 10000,
+                'ongkir' => $request->ongkir ?? 0,
+                'status' => 'pending', // Status awal
+                'alamat_pengiriman' => $request->alamat_pengiriman ?? '-',
+            ]);
+
+            // 2. Siapkan parameter Midtrans
             $params = [
                 'transaction_details' => [
-                    'order_id' => 'ORDER-' . time() . '-' . ($request->product_id ?? 'UNK'),
-                    'gross_amount' => (int) ($request->price ?? $request->total_amount ?? 10000),
+                    'order_id' => $orderId,
+                    'gross_amount' => (int) ($request->price ?? 10000),
                 ],
                 'customer_details' => [
                     'first_name' => Auth::user()->name ?? 'Customer',
                     'email' => Auth::user()->email ?? 'customer@example.com',
                 ],
+                // Atur Redirect agar kembali ke website Anda
+                'callbacks' => [
+                    'finish' => 'http://localhost:5173/buyer/orders', // Untuk tes lokal
+                ]
             ];
 
             // Menghasilkan Snap Token
             $snapToken = \Midtrans\Snap::getSnapToken($params);
             
+            // Simpan Snap Token ke database (Opsional tapi berguna untuk bayar nanti)
+            $transaction->update(['snap_token' => $snapToken]);
+
             return response()->json([
                 'token' => $snapToken,
                 'snap_token' => $snapToken,
+                'order_id' => $orderId
             ]);
 
         } catch (Exception $e) {
