@@ -13,11 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'api/payment/notification',
-            'api/payment/token'
+            'api/*', // Bebaskan semua API dari CSRF untuk sementara agar lancar
         ]);
 
-        $middleware->statefulApi();
+        // Non-aktifkan statefulApi karena frontend & backend beda domain (localhost vs thriftly.my.id)
+        // Gunakan Bearer Token saja di header.
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
