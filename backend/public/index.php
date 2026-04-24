@@ -1,20 +1,38 @@
 <?php
 
-use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
+/**
+ * Laravel - A PHP Framework For Web Artisans
+ *
+ * @package  Laravel
+ * @author   Taylor Otwell <taylor@laravel.com>
+ */
+
+// JALUR TIKUS TOTAL: Paksa respon dari gerbang paling depan
+if (isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'payment/token') !== false) {
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(200);
+        exit;
+    }
+
+    echo json_encode(['message' => 'GERBANG DEPAN (INDEX.PHP) TEMBUS!', 'status' => 'success']);
+    exit;
+}
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
-    require $maintenance;
-}
-
-// Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
-/** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+
+$response = $kernel->handle(
+    $request = Illuminate\Http\Request::capture()
+)->send();
+
+$kernel->terminate($request, $response);
