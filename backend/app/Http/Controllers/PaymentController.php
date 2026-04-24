@@ -74,7 +74,48 @@ class PaymentController extends Controller
 
     public function handleNotification(Request $request)
     {
-        Log::info('Midtrans Webhook', $request->all());
-        return response()->json(['status' => 'ok']);
+        try {
+            $serverKey = trim(config('services.midtrans.server_key'));
+            \Midtrans\Config::$serverKey = $serverKey;
+            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+
+            $notif = new \Midtrans\Notification();
+
+            $transaction = $notif->transaction_status;
+            $type = $notif->payment_type;
+            $orderId = $notif->order_id;
+            $fraud = $notif->fraud_status;
+
+            $localTransaction = Transaction::where('order_id', $orderId)->first();
+
+            if (!$localTransaction) {
+                return response()->json(['message' => 'Transaksi tidak ditemukan'], 404);
+            }
+
+            if ($transaction == 'capture') {
+                if ($type == 'credit_card') {
+                    if ($fraud == 'challenge') {
+                        $localTransaction->update(['status' => 'pending']);
+                    } else {
+                        $localTransaction->update(['status' => 'settlement']);
+                    }
+                }
+            } else if ($transaction == 'settlement') {
+                $localTransaction->update(['status' => 'settlement']);
+            } else if ($transaction == 'pending') {
+                $localTransaction->update(['status' => 'pending']);
+            } else if ($transaction == 'deny') {
+                $localTransaction->update(['status' => 'deny']);
+            } else if ($transaction == 'expire') {
+                $localTransaction->update(['status' => 'expire']);
+            } else if ($transaction == 'cancel') {
+                $localTransaction->update(['status' => 'cancel']);
+            }
+
+            return response()->json(['message' => 'Success']);
+
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 }
