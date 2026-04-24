@@ -30,7 +30,7 @@ class PaymentController extends Controller
             $params = [
                 'transaction_details' => [
                     'order_id' => 'ORDER-' . time() . '-' . ($request->product_id ?? 'UNK'),
-                    'gross_amount' => (int) ($request->total_amount ?? 10000),
+                    'gross_amount' => (int) ($request->price ?? $request->total_amount ?? 10000),
                 ],
                 'customer_details' => [
                     'first_name' => Auth::user()->name ?? 'Customer',
