@@ -25,6 +25,13 @@ class Product extends Model
         'is_bu' => 'boolean',
     ];
 
+    protected $appends = ['fotos'];
+
+    public function getFotosAttribute()
+    {
+        return $this->images ?? [];
+    }
+
     public function seller()
     {
         return $this->belongsTo(User::class, 'user_id');

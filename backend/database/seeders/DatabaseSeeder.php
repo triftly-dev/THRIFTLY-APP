@@ -43,7 +43,7 @@ class DatabaseSeeder extends Seeder
             'category' => 'Electronic',
             'location' => 'Surakarta',
             'status' => 'approved',
-            'images' => json_encode(['uploads/2026/04/1713975571_iphone-17-pro-max.png']),
+            'images' => ['https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=800'],
         ]);
 
         \App\Models\Product::create([
@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
             'category' => 'Fashion',
             'location' => 'Surakarta',
             'status' => 'approved',
-            'images' => json_encode(['uploads/2026/04/default-adidas.png']),
+            'images' => ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800'],
         ]);
     }
 }
