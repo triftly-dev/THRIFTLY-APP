@@ -39,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/transactions', [PaymentController::class, 'index']);
     Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
-    Route::patch('/transactions/{id}/status', [PaymentController::class, 'updateStatus']);
+    Route::post('/transactions/{id}/status', [PaymentController::class, 'updateStatus']);
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
 });
 
