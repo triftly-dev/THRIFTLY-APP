@@ -15,8 +15,14 @@ class PaymentController extends Controller
     public function createPayment(Request $request)
     {
         try {
-            Log::info('Step 1: Init Midtrans Config');
-            \Midtrans\Config::$serverKey = config('services.midtrans.server_key');
+            $serverKey = config('services.midtrans.server_key');
+            
+            if (!$serverKey) {
+                throw new Exception('MIDTRANS_SERVER_KEY tidak ditemukan di file .env atau config VPS');
+            }
+
+            Log::info('Step 1: Init Midtrans Config with Key: ' . substr($serverKey, 0, 5) . '...');
+            \Midtrans\Config::$serverKey = $serverKey;
             \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
             \Midtrans\Config::$isSanitized = true;
             \Midtrans\Config::$is3ds = true;
