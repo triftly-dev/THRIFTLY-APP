@@ -1,5 +1,13 @@
 <?php
 
+Route::get('/test-api', function() {
+    return response()->json(['message' => 'API is working!']);
+});
+
+Route::post('/test-post', function() {
+    return response()->json(['message' => 'POST is working!']);
+});
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
