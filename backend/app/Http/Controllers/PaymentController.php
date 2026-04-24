@@ -12,6 +12,28 @@ use Exception;
 
 class PaymentController extends Controller
 {
+    public function index()
+    {
+        // Ambil pesanan saya sebagai pembeli
+        $transactions = Transaction::with('product')
+            ->where('buyer_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($transactions);
+    }
+
+    public function sellerOrders()
+    {
+        // Ambil pesanan yang masuk ke toko saya sebagai penjual
+        $transactions = Transaction::with(['product', 'buyer'])
+            ->where('seller_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($transactions);
+    }
+
     public function createPayment(Request $request)
     {
         try {

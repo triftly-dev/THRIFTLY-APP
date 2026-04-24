@@ -38,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/messages', [MessageController::class, 'store']);
 
     // --- FITUR PEMBAYARAN (Buyer) ---
+    Route::get('/transactions', [PaymentController::class, 'index']);
+    Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
 });
 
