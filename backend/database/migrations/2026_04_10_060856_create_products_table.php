@@ -19,6 +19,7 @@ return new class extends Migration
             $table->decimal('price', 12, 2);
             $table->string('category');
             $table->string('location')->nullable();
+            $table->string('condition')->default('Second'); // Tambahkan ini
             $table->boolean('is_bu')->default(false); // Butuh Uang tag
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->json('images')->nullable(); // Simpan array path foto

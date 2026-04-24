@@ -13,6 +13,7 @@ class Product extends Model
         'price',
         'category',
         'location',
+        'condition',
         'is_bu',
         'status',
         'images',
