@@ -8,31 +8,27 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
-    // Mengambil semua produk (untuk halaman guest/belanja)
     public function index()
     {
         return response()->json(Product::where('status', 'approved')->latest()->get());
     }
 
-    // Mengambil semua produk tanpa filter status (untuk admin dashboard & approval)
     public function adminIndex()
     {
-        // Secara ideal harus dicek Auth::user()->role === 'admin'
         return response()->json(Product::latest()->get());
     }
 
-    // Mengambil produk milik penjual yang sedang login
     public function myProducts()
     {
         $user = Auth::user();
         return response()->json(Product::where('user_id', $user->id)->latest()->get());
     }
 
-    // Menambah produk baru
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
+            'name' => 'required',
+            'description' => 'required',
             'price' => 'required|numeric',
             'category' => 'required',
             'images' => 'nullable|array',
@@ -52,12 +48,11 @@ class ProductController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Produk berhasil diajukan dan sedang ditinjau!',
+            'message' => 'Produk berhasil ditambahkan dan sedang ditinjau admin',
             'product' => $product
         ], 201);
     }
 
-    // Update produk
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
@@ -68,25 +63,25 @@ class ProductController extends Controller
         }
 
         $product->update($request->all());
-
-        return response()->json([
-            'message' => 'Produk berhasil diperbarui!',
-            'product' => $product
-        ]);
+        return response()->json($product);
     }
 
-    // Hapus produk
+    public function show($id)
+    {
+        // Cari produk berdasarkan ID beserta data detail penjualnya
+        $product = Product::with('seller')->findOrFail($id);
+        return response()->json($product);
+    }
+
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
-        $user = Auth::user();
 
-        if ($product->user_id !== $user->id && $user->role !== 'admin') {
+        if ($product->user_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $product->delete();
-
         return response()->json(['message' => 'Produk berhasil dihapus!']);
     }
 
@@ -95,7 +90,6 @@ class ProductController extends Controller
         try {
             $product = \App\Models\Product::findOrFail($id);
             
-            // Log untuk memastikan data ditemukan
             \Illuminate\Support\Facades\Log::info("Mencoba menandai terjual produk ID: " . $id);
 
             $product->update([
@@ -103,9 +97,10 @@ class ProductController extends Controller
                 'stock' => 0
             ]);
 
+            // Hanya kirim pesan sukses tanpa data produk yang berat agar memori VPS aman
             return response()->json([
-                'message' => 'Product marked as sold!',
-                'product' => $product
+                'message' => 'Produk berhasil ditandai terjual!',
+                'product_id' => $id
             ]);
             
         } catch (\Exception $e) {
@@ -119,38 +114,14 @@ class ProductController extends Controller
     public function approve(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $product->update([
-            'status' => 'approved',
-            'admin_note' => $request->note 
-        ]);
-
-        return response()->json(['message' => 'Produk disetujui!']);
+        $product->update(['status' => 'approved']);
+        return response()->json($product);
     }
 
     public function reject(Request $request, $id)
     {
         $product = Product::findOrFail($id);
-        
-        if (Auth::user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $product->update([
-            'status' => 'rejected',
-            'admin_note' => $request->note
-        ]);
-
-        return response()->json(['message' => 'Produk ditolak!']);
-    }
-
-    // Melihat detail produk
-    public function show($id)
-    {
-        return response()->json(Product::with('seller')->findOrFail($id));
+        $product->update(['status' => 'rejected']);
+        return response()->json($product);
     }
 }
