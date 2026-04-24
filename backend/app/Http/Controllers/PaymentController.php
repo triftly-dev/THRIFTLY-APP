@@ -10,8 +10,6 @@ class PaymentController extends Controller
 {
     public function createPayment(Request $request)
     {
-        return response()->json(['message' => 'HELLO DARI SERVER! API TERHUBUNG']);
-
         // 1. Validasi Input agar Aman
         $request->validate([
             'product_id' => 'required|exists:products,id',
