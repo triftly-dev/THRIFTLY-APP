@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
     Route::post('/transactions/{id}/status', [PaymentController::class, 'updateStatus']);
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
+    Route::post('/payment/charge', [PaymentController::class, 'charge']);
 });
 
 // Link Laporan Midtrans (Wajib di LUAR middleware auth karena dipanggil server Midtrans)
