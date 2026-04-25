@@ -31,4 +31,12 @@ class NewsletterController extends Controller
             'message' => 'Berhasil berlangganan newsletter!'
         ], 201);
     }
+
+    /**
+     * Alias untuk sinkronisasi dengan frontend rekan (meminta method 'store')
+     */
+    public function store(Request $request)
+    {
+        return $this->subscribe($request);
+    }
 }
