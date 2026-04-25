@@ -7,6 +7,8 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\BlogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +20,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+Route::get('/blogs', [BlogController::class, 'index']);
+Route::get('/blogs/{id}', [BlogController::class, 'show']);
 
 /*
 |--------------------------------------------------------------------------
@@ -34,8 +39,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- FITUR CHAT ---
+    Route::get('/messages', [MessageController::class, 'getUnreadCount']); // Fix 405 unread count
     Route::get('/messages/{receiverId}', [MessageController::class, 'index']);
     Route::post('/messages', [MessageController::class, 'store']);
+
+    // --- FITUR BLOG (Admin) ---
+    Route::post('/blogs', [BlogController::class, 'store']);
 
     Route::get('/transactions', [PaymentController::class, 'index']);
     Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
