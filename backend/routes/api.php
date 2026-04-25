@@ -39,9 +39,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- FITUR CHAT ---
-    Route::get('/messages', [MessageController::class, 'getUnreadCount']); // Fix 405 unread count
-    Route::get('/messages/{receiverId}', [MessageController::class, 'index']);
+    // 1. Ambil daftar semua percakapan (untuk Inbox)
+    Route::get('/messages', [MessageController::class, 'index']);
+    
+    // 2. Ambil detail chat berdasarkan Produk dan Lawan Bicara
+    Route::get('/messages/{productId}/{otherUserId}', [MessageController::class, 'getConversationDetail']);
+    
+    // 3. Kirim pesan baru
     Route::post('/messages', [MessageController::class, 'store']);
+    
+    // 4. Tandai pesan sudah dibaca
+    Route::post('/messages/read', [MessageController::class, 'markAsRead']);
+    
+    // 5. Cek jumlah unread (Opsional)
+    Route::get('/messages/unread/count', [MessageController::class, 'getUnreadCount']);
 
     // --- FITUR BLOG (Admin) ---
     Route::post('/blogs', [BlogController::class, 'store']);
