@@ -30,7 +30,7 @@ class MessageController extends Controller
         $latestMessageIds = $subQuery->pluck('id');
 
         $messages = Message::whereIn('id', $latestMessageIds)
-            ->with(['sender.profile', 'receiver.profile', 'product'])
+            ->with(['sender', 'receiver', 'product'])
             ->orderBy('created_at', 'desc')
             ->get();
 
