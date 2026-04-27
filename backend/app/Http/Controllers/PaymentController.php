@@ -45,7 +45,7 @@ class PaymentController extends Controller
             $product = Product::find($request->product_id);
             if ($product) {
                 $product->status = 'sold';
-                $product->timestamps = false; // Matikan timestamps jika ada masalah di kolom updated_at
+                $product->timestamps = false; // Hindari error _updated_at
                 $product->save();
             }
 
