@@ -44,7 +44,9 @@ class PaymentController extends Controller
             // 3. (Opsional) Ubah status produk menjadi terjual
             $product = Product::find($request->product_id);
             if ($product) {
-                $product->update(['status' => 'sold']);
+                $product->status = 'sold';
+                $product->timestamps = false; // Matikan timestamps jika ada masalah di kolom updated_at
+                $product->save();
             }
 
             return response()->json([
