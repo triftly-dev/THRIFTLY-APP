@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Status: 'pending', 'approved', 'rejected', 'sold'
+ */
 class Product extends Model
 {
     protected $fillable = [

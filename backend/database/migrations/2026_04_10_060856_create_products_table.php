@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->string('condition')->default('Second'); // Tambahkan ini
             $table->boolean('is_bu')->default(false); // Butuh Uang tag
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'rejected', 'sold'])->default('pending');
             $table->json('images')->nullable(); // Simpan array path foto
             $table->text('admin_note')->nullable(); // Catatan admin jika ditolak
             $table->timestamps();
