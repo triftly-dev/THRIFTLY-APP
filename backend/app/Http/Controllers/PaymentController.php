@@ -23,6 +23,44 @@ class PaymentController extends Controller
         return response()->json($transactions);
     }
 
+    public function store(Request $request)
+    {
+        try {
+            // 1. Buat Order ID unik untuk transaksi manual
+            $orderId = 'MANUAL-' . time() . '-' . ($request->product_id ?? '0');
+
+            // 2. Simpan Transaksi ke Database
+            $transaction = Transaction::create([
+                'order_id' => $orderId,
+                'product_id' => $request->product_id,
+                'buyer_id' => Auth::id(),
+                'seller_id' => $request->seller_id,
+                'harga_final' => $request->price ?? $request->harga_final ?? 0,
+                'status' => 'pending', // Default status
+                'payment_type' => 'manual_transfer',
+                'alamat_pengiriman' => $request->alamat_pengiriman ?? '-',
+            ]);
+
+            // 3. (Opsional) Ubah status produk menjadi terjual
+            $product = Product::find($request->product_id);
+            if ($product) {
+                $product->update(['status' => 'sold']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaksi manual berhasil dibuat',
+                'data' => $transaction
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membuat transaksi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function sellerOrders()
     {
         // Ambil pesanan yang masuk ke toko saya sebagai penjual

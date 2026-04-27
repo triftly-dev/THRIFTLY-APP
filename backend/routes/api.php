@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/blogs', [BlogController::class, 'store']);
 
     Route::get('/transactions', [PaymentController::class, 'index']);
+    Route::post('/transactions', [PaymentController::class, 'store']); // Tambahan untuk transaksi manual
     Route::get('/seller/orders', [PaymentController::class, 'sellerOrders']);
     Route::post('/transactions/{id}/status', [PaymentController::class, 'updateStatus']);
     Route::post('/payment/token', [PaymentController::class, 'createPayment']);
