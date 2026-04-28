@@ -252,4 +252,12 @@ class PaymentController extends Controller
             return response()->json(['message' => $e->getMessage()], 500);
         }
     }
+
+    public function adminTransactions()
+    {
+        $transactions = Transaction::with(['product', 'buyer', 'seller'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return response()->json($transactions);
+    }
 }
