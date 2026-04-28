@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -60,6 +61,18 @@ class UserController extends Controller
                 'message' => 'User not found.'
             ], 404);
         }
+
+        // --- TAMBAHKAN VALIDASI INI ---
+        $validator = Validator::make($request->all(), [
+            'email' => 'unique:users,email,' . $id
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Email ini sudah digunakan oleh pengguna lain!'
+            ], 422);
+        }
+        // ------------------------------
 
         if ($request->has('name')) {
             $user->name = $request->name;
