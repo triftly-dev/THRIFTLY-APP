@@ -50,4 +50,32 @@ class UserController extends Controller
             'message' => 'User deleted successfully.'
         ]);
     }
+
+    public function updateAdmin(Request $request, $id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found.'
+            ], 404);
+        }
+
+        if ($request->has('name')) {
+            $user->name = $request->name;
+        }
+        if ($request->has('email')) {
+            $user->email = $request->email;
+        }
+        if ($request->has('role')) {
+            $user->role = $request->role;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'User updated successfully.',
+            'user' => $user
+        ]);
+    }
 }

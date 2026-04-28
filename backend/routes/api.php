@@ -83,6 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/products/{id}/approve', [ProductController::class, 'approve']);
         Route::put('/admin/products/{id}/reject', [ProductController::class, 'reject']);
         Route::delete('/admin/users/{id}', [UserController::class, 'destroy']); // Contoh fitur admin delete user
+        Route::put('/admin/users/{id}', [UserController::class, 'updateAdmin']);
         Route::get('/admin/transactions', [PaymentController::class, 'adminTransactions']);
     });
 
