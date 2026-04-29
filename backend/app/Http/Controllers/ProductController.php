@@ -5,12 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
     public function index()
     {
-        return response()->json(Product::where('status', 'approved')->latest()->get());
+        // Simpan hasil query di cache selama 10 menit (600 detik)
+        $products = Cache::remember('approved_products_limit_24', 600, function () {
+            return Product::where('status', 'approved')->latest()->limit(24)->get();
+        });
+
+        return response()->json($products);
     }
 
     public function adminIndex()
