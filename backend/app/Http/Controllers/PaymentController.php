@@ -14,11 +14,11 @@ class PaymentController extends Controller
 {
     public function index()
     {
-        // Ambil pesanan saya sebagai pembeli
+        // Ambil pesanan saya sebagai pembeli dengan pagination
         $transactions = Transaction::with('product')
             ->where('buyer_id', Auth::id())
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
 
         return response()->json($transactions);
     }
@@ -257,7 +257,7 @@ class PaymentController extends Controller
     {
         $transactions = Transaction::with(['product', 'buyer', 'seller'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(10);
         return response()->json($transactions);
     }
 }

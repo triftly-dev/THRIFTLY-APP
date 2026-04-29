@@ -24,13 +24,16 @@ class ProductController extends Controller
 
     public function adminIndex()
     {
-        return response()->json(Product::latest()->get());
+        // Gunakan paginate agar Admin hanya memuat 10 data per halaman
+        // Ini akan membuat Dashboard jauh lebih ringan
+        return response()->json(Product::with('seller')->latest()->paginate(10));
     }
 
     public function myProducts()
     {
         $user = Auth::user();
-        return response()->json(Product::where('user_id', $user->id)->latest()->get());
+        // Gunakan paginate agar halaman penjual tetap ringan
+        return response()->json(Product::where('user_id', $user->id)->latest()->paginate(10));
     }
 
     public function store(Request $request)
