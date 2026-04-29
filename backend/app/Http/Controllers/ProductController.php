@@ -13,7 +13,8 @@ class ProductController extends Controller
     {
         // Simpan hasil query di cache selama 10 menit (600 detik)
         $products = Cache::remember('approved_products_limit_24', 600, function () {
-            return Product::where('status', 'approved')->latest()->limit(24)->get();
+            // Ditambahkan with('seller') agar tidak terjadi N+1 Problem
+            return Product::with('seller')->where('status', 'approved')->latest()->limit(24)->get();
         });
 
         return response()->json($products);
