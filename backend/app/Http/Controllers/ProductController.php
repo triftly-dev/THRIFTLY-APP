@@ -6,6 +6,9 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -41,6 +44,18 @@ class ProductController extends Controller
             'images' => 'nullable|array',
         ]);
 
+        // Proses gambar dari Base64 menjadi File Fisik
+        $imagePaths = [];
+        if ($request->has('images')) {
+            foreach ($request->images as $base64) {
+                if (Str::startsWith($base64, 'data:image')) {
+                    $imagePaths[] = $this->uploadBase64Image($base64);
+                } else {
+                    $imagePaths[] = $base64; // Jika sudah berupa path
+                }
+            }
+        }
+
         $product = Product::create([
             'user_id' => Auth::id(),
             'name' => $request->name,
@@ -49,10 +64,13 @@ class ProductController extends Controller
             'category' => $request->category,
             'location' => $request->location,
             'is_bu' => $request->is_bu ?? false,
-            'status' => 'pending', // Default ditinjau admin dulu
-            'images' => $request->images,
+            'status' => 'pending',
+            'images' => $imagePaths, // Simpan array path, bukan base64
             'stock' => $request->stock ?? 1,
         ]);
+
+        // Hapus cache agar data baru muncul
+        Cache::forget('approved_products_limit_24');
 
         return response()->json([
             'message' => 'Produk berhasil ditambahkan dan sedang ditinjau admin',
@@ -60,16 +78,48 @@ class ProductController extends Controller
         ], 201);
     }
 
+    private function uploadBase64Image($base64)
+    {
+        // Decode base64
+        $image_service_str = substr($base64, strpos($base64, ",") + 1);
+        $image = base64_decode($image_service_str);
+        
+        // Buat nama file unik
+        $fileName = 'products/' . Str::random(20) . '.png';
+        
+        // Simpan ke storage public
+        Storage::disk('public')->put($fileName, $image);
+        
+        // Kembalikan URL yang bisa diakses
+        return Storage::url($fileName);
+    }
+
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
 
-        // Pastikan yang mengedit adalah pemiliknya
         if ($product->user_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $product->update($request->all());
+        $data = $request->all();
+
+        // Jika ada perubahan gambar dalam bentuk base64, proses ulang
+        if ($request->has('images')) {
+            $imagePaths = [];
+            foreach ($request->images as $img) {
+                if (Str::startsWith($img, 'data:image')) {
+                    $imagePaths[] = $this->uploadBase64Image($img);
+                } else {
+                    $imagePaths[] = $img;
+                }
+            }
+            $data['images'] = $imagePaths;
+        }
+
+        $product->update($data);
+        Cache::forget('approved_products_limit_24');
+        
         return response()->json($product);
     }
 
