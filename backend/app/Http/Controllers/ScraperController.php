@@ -23,11 +23,11 @@ class ScraperController extends Controller
 
         $url = $request->input('url');
 
-        // Pattern validation based on spec
-        if (!preg_match('/(facebook\.com|fb\.com)\/marketplace\/item\//i', $url)) {
+        // Pattern validation: Terima semua link FB karena URL bisa berupa shortlink (/share/ atau fb.me)
+        if (!preg_match('/(facebook\.com|fb\.com|fb\.me|m\.facebook\.com)/i', $url)) {
             return response()->json([
                 'success' => false,
-                'message' => 'URL yang diberikan bukan URL Facebook Marketplace yang valid'
+                'message' => 'Link-nya bukan dari Facebook. Pastikan menggunakan link dari Facebook Marketplace.'
             ], 400);
         }
 
