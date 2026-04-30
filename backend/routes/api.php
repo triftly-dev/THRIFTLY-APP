@@ -91,5 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- FITUR SCRAPER ---
     Route::post('/scrape/facebook-marketplace', [ScraperController::class, 'scrapeFacebookMarketplace']);
+    Route::post('/scrape/tokopedia', [ScraperController::class, 'scrapeTokopedia']);
 
 });

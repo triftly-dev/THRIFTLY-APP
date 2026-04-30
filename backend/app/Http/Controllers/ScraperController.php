@@ -122,4 +122,90 @@ class ScraperController extends Controller
             ], 422);
         }
     }
+
+    /**
+     * Scrape Tokopedia product data.
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function scrapeTokopedia(Request $request)
+    {
+        $request->validate([
+            'url' => 'required|url'
+        ]);
+
+        $url = $request->input('url');
+
+        // Pattern validation
+        if (!preg_match('/tokopedia\.com\//i', $url)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'URL yang diberikan bukan URL Tokopedia yang valid'
+            ], 400);
+        }
+
+        try {
+            $html = Browsershot::url($url)
+                ->userAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+                ->windowSize(1920, 1080)
+                ->waitUntilNetworkIdle()
+                ->timeout(60)
+                ->bodyHtml();
+
+            $crawler = new Crawler($html);
+            $data = [
+                'title' => '',
+                'description' => '',
+                'price' => '',
+                'condition' => 'New',
+                'location' => '',
+                'category' => '',
+                'images' => [],
+                'source_url' => $url
+            ];
+
+            // Tokopedia JSON-LD is very structured
+            $jsonLdScripts = $crawler->filter('script[type="application/ld+json"]');
+            $jsonLdScripts->each(function (Crawler $node) use (&$data) {
+                $json = json_decode($node->text(), true);
+                
+                // Tokopedia usually has an array of objects or a single Product object
+                $items = isset($json['@type']) ? [$json] : (is_array($json) ? $json : []);
+
+                foreach ($items as $item) {
+                    if (isset($item['@type']) && $item['@type'] === 'Product') {
+                        $data['title'] = $item['name'] ?? $data['title'];
+                        $data['description'] = $item['description'] ?? $data['description'];
+                        if (isset($item['offers']['price'])) {
+                            $data['price'] = $item['offers']['price'];
+                        }
+                        if (isset($item['image'])) {
+                            $data['images'] = is_array($item['image']) ? array_slice($item['image'], 0, 5) : [$item['image']];
+                        }
+                        if (isset($item['category'])) {
+                            $data['category'] = $item['category'];
+                        }
+                    }
+                }
+            });
+
+            // Fallback for location
+            try {
+                $data['location'] = $crawler->filter('meta[property="og:locality"]')->attr('content') ?? '';
+            } catch (\Exception $e) {}
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Tokopedia Scraping Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data dari Tokopedia. Pastikan link produk benar dan publik.'
+            ], 422);
+        }
+    }
 }
