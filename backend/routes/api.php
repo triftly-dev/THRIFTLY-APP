@@ -9,6 +9,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\ScraperController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -86,5 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/users/{id}', [UserController::class, 'updateAdmin']);
         Route::get('/admin/transactions', [PaymentController::class, 'adminTransactions']);
     });
+
+    // --- FITUR SCRAPER ---
+    Route::post('/scrape/facebook-marketplace', [ScraperController::class, 'scrapeFacebookMarketplace']);
 
 });
