@@ -20,32 +20,35 @@ class MessageController extends Controller
     {
         $userId = Auth::id();
         
-        // Query untuk mengambil ID pesan terbaru dari setiap percakapan
-        // Percakapan unik diidentifikasi oleh product_id dan (sender_id + receiver_id)
-        $subQuery = Message::where('sender_id', $userId)
-            ->orWhere('receiver_id', $userId)
-            ->selectRaw('MAX(id) as id')
-            ->groupByRaw('product_id, IF(sender_id = ?, receiver_id, sender_id)', [$userId]);
-
-        $latestMessageIds = $subQuery->pluck('id');
-
-        $messages = Message::whereIn('id', $latestMessageIds)
+        // Optimasi: Gunakan Join dan Subquery untuk mendapatkan pesan terakhir DAN unread count dalam SATU query
+        // Ini menghindari N+1 problem (query di dalam loop)
+        $messages = Message::from('messages as m')
+            ->select('m.*')
+            ->selectSub(function ($query) use ($userId) {
+                $query->from('messages')
+                    ->whereColumn('product_id', 'm.product_id')
+                    ->where('receiver_id', $userId)
+                    ->where('is_read', false)
+                    ->where(function($q) use ($userId) {
+                        $q->whereColumn('sender_id', 'm.sender_id')
+                          ->orWhereColumn('sender_id', 'm.receiver_id');
+                    })
+                    ->where(function($q) use ($userId) {
+                        $q->whereColumn('receiver_id', 'm.sender_id')
+                          ->orWhereColumn('receiver_id', 'm.receiver_id');
+                    })
+                    ->selectRaw('count(*)');
+            }, 'unread_count')
+            ->whereIn('m.id', function ($query) use ($userId) {
+                $query->selectRaw('MAX(id)')
+                    ->from('messages')
+                    ->where('sender_id', $userId)
+                    ->orWhere('receiver_id', $userId)
+                    ->groupByRaw('product_id, IF(sender_id = ?, receiver_id, sender_id)', [$userId]);
+            })
             ->with(['sender', 'receiver', 'product'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Tambahkan unread count untuk setiap percakapan
-        $messages->transform(function ($message) use ($userId) {
-            $otherUserId = ($message->sender_id == $userId) ? $message->receiver_id : $message->sender_id;
-            
-            $message->unread_count = Message::where('product_id', $message->product_id)
-                ->where('sender_id', $otherUserId)
-                ->where('receiver_id', $userId)
-                ->where('is_read', false)
-                ->count();
-            
-            return $message;
-        });
+            ->orderBy('m.created_at', 'desc')
+            ->paginate(15); // Tambahkan pagination agar tidak membebani RAM 1GB
 
         return response()->json($messages);
     }
@@ -128,10 +131,17 @@ class MessageController extends Controller
      */
     public function getUnreadCount()
     {
-        $count = Message::where('receiver_id', Auth::id())
-                        ->where('is_read', false)
-                        ->count();
+        $userId = Auth::id();
+        $cacheKey = "unread_count_{$userId}";
+
+        // Caching selama 30 detik untuk meringankan beban VPS RAM 1GB
+        // Jika ada ratusan request dalam 30 detik, database hanya dipukul 1x.
+        $count = \Cache::remember($cacheKey, 30, function () use ($userId) {
+            return Message::where('receiver_id', $userId)
+                            ->where('is_read', false)
+                            ->count();
+        });
         
-        return response()->json(['unread_count' => $count]);
+        return response()->json(['unread_count' => (int)$count]);
     }
 }
