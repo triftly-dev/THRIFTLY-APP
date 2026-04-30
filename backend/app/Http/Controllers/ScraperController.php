@@ -137,8 +137,8 @@ class ScraperController extends Controller
 
         $url = $request->input('url');
 
-        // Pattern validation
-        if (!preg_match('/tokopedia\.com\//i', $url)) {
+        // Pattern validation: Terima tokopedia.com ATAU tokopedia.link (dari aplikasi HP)
+        if (!preg_match('/(tokopedia\.com|tokopedia\.link)/i', $url)) {
             return response()->json([
                 'success' => false,
                 'message' => 'URL yang diberikan bukan URL Tokopedia yang valid'
