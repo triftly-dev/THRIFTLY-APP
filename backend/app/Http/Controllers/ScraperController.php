@@ -32,12 +32,13 @@ class ScraperController extends Controller
         }
 
         try {
-            // Setup Browsershot
-            // We use common user agent to avoid being blocked immediately
+            // Setup Browsershot dengan konfigurasi "Anti-Bot"
             $html = Browsershot::url($url)
                 ->userAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+                ->windowSize(1920, 1080)
+                ->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'])
                 ->waitUntilNetworkIdle()
-                ->timeout(30)
+                ->timeout(60) // Ditambah agar lebih sabar menunggu render FB
                 ->bodyHtml();
 
             if (empty($html)) {
