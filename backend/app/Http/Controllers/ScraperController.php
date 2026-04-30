@@ -32,9 +32,9 @@ class ScraperController extends Controller
         }
 
         try {
-            // Setup Browsershot dengan konfigurasi "Anti-Bot"
+            // Setup Browsershot dengan trik "Penyamaran Facebook/WhatsApp Crawler"
             $html = Browsershot::url($url)
-                ->userAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+                ->userAgent('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')
                 ->windowSize(1920, 1080)
                 ->setOption('args', ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'])
                 ->waitUntilNetworkIdle()
