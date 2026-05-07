@@ -183,6 +183,18 @@ class PaymentController extends Controller
 
             $response = \Midtrans\CoreApi::charge($params);
 
+            // Ambil nomor VA dari berbagai kemungkinan field Midtrans
+            $vaNumber = null;
+            if (isset($response->va_numbers[0]->va_number)) {
+                $vaNumber = $response->va_numbers[0]->va_number;
+            } elseif (isset($response->bill_key)) {
+                $vaNumber = $response->bill_key; // Untuk Mandiri
+            } elseif (isset($response->permata_va_number)) {
+                $vaNumber = $response->permata_va_number;
+            } elseif (isset($response->payment_code)) {
+                $vaNumber = $response->payment_code; // Untuk Indomaret/Alfamart
+            }
+
             $transaction = Transaction::create([
                 'order_id' => $orderId,
                 'product_id' => $request->product_id,
@@ -192,7 +204,7 @@ class PaymentController extends Controller
                 'status' => 'pending',
                 'payment_type' => $response->payment_type ?? 'bank_transfer',
                 'bank' => $request->bank ?? 'bca',
-                'va_number' => $response->va_numbers[0]->va_number ?? null,
+                'va_number' => $vaNumber,
                 'expiry_time' => $response->expiry_time ?? null,
                 'pdf_url' => $response->pdf_url ?? null,
             ]);
