@@ -159,8 +159,11 @@ class PaymentController extends Controller
             $orderId = 'ORDER-' . time() . '-' . ($request->product_id ?? '1');
             $grossAmount = (int) ($request->price ?? 10000);
 
+            $bank = $request->bank ?? 'bca';
+            $paymentType = ($bank === 'gopay') ? 'gopay' : 'bank_transfer';
+
             $params = [
-                'payment_type' => 'bank_transfer',
+                'payment_type' => $paymentType,
                 'transaction_details' => [
                     'order_id' => $orderId,
                     'gross_amount' => $grossAmount,
@@ -169,10 +172,13 @@ class PaymentController extends Controller
                     'first_name' => Auth::user()->name ?? 'Customer',
                     'email' => Auth::user()->email ?? 'customer@example.com',
                 ],
-                'bank_transfer' => [
-                    'bank' => $request->bank ?? 'bca',
-                ],
             ];
+
+            if ($paymentType === 'bank_transfer') {
+                $params['bank_transfer'] = [
+                    'bank' => $bank,
+                ];
+            }
 
             $response = \Midtrans\CoreApi::charge($params);
 
