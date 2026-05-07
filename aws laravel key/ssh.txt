@@ -1,8 +1,0 @@
-ssh -i laravel-key.pem ubuntu@13.211.219.19
-
-ssh -i "laravel-key.pem" -o ServerAliveInterval=30 -o ServerAliveCountMax=10 ubuntu@13.211.96.87
-
-Email: admin@thriftly.my.id
-Password: admin123
-
-git remote set-url origin https://triftly-dev@github.com/triftly-dev/THRIFTLY-APP.git
