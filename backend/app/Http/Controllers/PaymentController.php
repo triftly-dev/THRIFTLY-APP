@@ -151,7 +151,6 @@ class PaymentController extends Controller
     {
         try {
             $serverKey = trim(config('services.midtrans.server_key'));
-            $merchantId = trim(config('services.midtrans.merchant_id'));
             
             \Midtrans\Config::$serverKey = $serverKey;
             \Midtrans\Config::$isProduction = (bool) config('services.midtrans.is_production');
