@@ -18,13 +18,6 @@ use App\Http\Controllers\ScraperController;
 |--------------------------------------------------------------------------
 */
 Route::get('/test-api', function() { return response()->json(['message' => 'API is working!']); });
-Route::get('/debug-midtrans', function() {
-    return response()->json([
-        'server_key_exists' => !empty(config('services.midtrans.server_key')),
-        'is_production' => config('services.midtrans.is_production'),
-        'server_key_start' => substr(config('services.midtrans.server_key'), 0, 15),
-    ]);
-});
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/products', [ProductController::class, 'index']);
