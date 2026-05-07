@@ -1,0 +1,67 @@
+==========================================================================
+   PANDUAN IMPLEMENTASI FRONTEND (REACT) - CUSTOM UI MIDTRANS
+==========================================================================
+Khusus untuk: Frontend Developer
+Tujuan: Mengintegrasikan Core API Midtrans ke dalam UI React (Tanpa Snap Popup).
+
+1. DAFTAR FILE YANG BERDAMPAK
+--------------------------------------------------
+A. FOLDER SERVICES (Logika API & Javascipt):
+   - src/services/transactionService.js  --> Lokasi penambahan fungsi API.
+   - src/services/messageService.js      --> Sycn untuk fitur chat.
+
+B. FOLDER PAGES (Komponen JSX):
+   - src/pages/buyer/Checkout.jsx        --> Logika ganti dari Snap ke Redirect.
+   - src/pages/buyer/PaymentDetail.jsx   --> Halaman baru UI Invoice/Mandiri.
+   - src/pages/buyer/MyOrders.jsx        --> Tambah tombol Bayar & Modal Detail.
+
+C. FOLDER ROUTES:
+   - src/routes/index.jsx                --> Registrasi path /payment/success/:orderId.
+
+
+2. PENAMBAHAN FUNGSI DI SERVICES (transactionService.js)
+--------------------------------------------------
+Pastikan fungsi-fungsi ini ada di dalam folder services:
+
+// Untuk mendapatkan nomor VA (Virtual Account) dari server
+async charge(paymentData) {
+  const response = await api.post('/payment/charge', paymentData);
+  return response.data;
+}
+
+// Untuk mengambil data invoice berdasarkan Order ID
+async getTransactionByOrderId(orderId) {
+  const response = await api.get('/transactions');
+  return response.data.find(t => t.order_id === orderId);
+}
+
+
+3. LOGIKA REPLACING SNAP (Checkout.jsx)
+--------------------------------------------------
+Ubah flow di file .jsx ini:
+- Hapus semua library snap.js.
+- Saat klik bayar, panggil `transactionService.charge()`.
+- Setelah response sukses, gunakan `navigate` untuk pindah halaman:
+  navigate(`/payment/success/${res.data.order_id}`);
+
+
+4. ENDPOINT API YANG DIPANGGIL DARI REACT
+--------------------------------------------------
+React harus menembak URL berikut ke Backend:
+- POST /api/payment/charge   --> (Dapatkan VA & simpan transaksi).
+- GET  /api/transactions     --> (Ambil daftar/detail transaksi).
+- GET  /api/messages         --> (Ambil daftar inbox chat terbaru).
+- POST /api/messages/read    --> (Update status tanda dibaca).
+- POST /api/newsletters      --> (Simpan email langganan).
+
+
+5. TAMPILAN MANDIRI (PaymentDetail.jsx)
+--------------------------------------------------
+File JSX ini harus menangani:
+- Menampilkan Nomor VA yang didapat dari Backend.
+- Menampilkan total bayar dan instruksi cara transfer.
+- Tombol "Cek Status" yang melakukan refresh data ke API.
+
+==========================================================================
+Dibuat secara otomatis oleh Antigravity - Tim Secondnesia.
+==========================================================================
