@@ -73,11 +73,10 @@ class OTPController extends Controller
         // Jika OK, hapus OTP agar tidak dipakai lagi
         $otp->delete();
 
-        // Tandai nomor telepon user sebagai terverifikasi di tabel users (jika perlu)
+        // Tandai nomor telepon user sebagai terverifikasi di tabel users
         $user = User::where('no_telp', $request->phone)->first();
         if ($user) {
-            // Anda bisa menambah kolom 'phone_verified_at' jika ingin
-            $user->update(['lokasi' => 'verified_phone']); // Contoh sementara
+            $user->update(['phone_verified_at' => now()]);
         }
 
         return response()->json(['message' => 'Verifikasi nomor telepon berhasil!']);

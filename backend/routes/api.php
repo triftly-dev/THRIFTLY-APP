@@ -51,6 +51,9 @@ Route::get('/blogs/{id}', [BlogController::class, 'show']);
 | Protected Routes (Wajib Login)
 |--------------------------------------------------------------------------
 */
+Route::post('/otp/send', [OTPController::class, 'sendOTP']);
+Route::post('/otp/verify', [OTPController::class, 'verifyOTP']);
+
 Route::middleware('auth:sanctum')->group(function () {
 
     // --- FITUR UMUM (Buyer & Seller) ---
