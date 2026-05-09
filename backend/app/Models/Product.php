@@ -29,26 +29,27 @@ class Product extends Model
         'is_bu' => 'boolean',
     ];
 
-    // Tambahkan appends agar field bahasa Indonesia selalu tersedia untuk frontend
-    protected $appends = ['nama', 'harga', 'deskripsi', 'kategori', 'kondisi', 'isBU', 'stok', 'lokasi', 'fotos'];
+    // Hapus appends yang menduplikasi data berat (seperti fotos) agar RAM VPS tidak meledak
+    protected $appends = ['nama', 'harga', 'deskripsi', 'kategori', 'kondisi', 'isBU', 'stok', 'lokasi'];
 
-    public function getNamaAttribute() { return $this->name; }
-    public function getHargaAttribute() { return $this->price; }
-    public function getDeskripsiAttribute() { return $this->description; }
-    public function getKategoriAttribute() { return $this->category; }
-    public function getKondisiAttribute() { return $this->condition; }
-    public function getIsBUAttribute() { return $this->is_bu; }
-    public function getStokAttribute() { return $this->stock; }
-    public function getLokasiAttribute() { return $this->location; }
-    // Mengubah atribut 'images' asli agar sinkron dengan frontend produksi
-    public function getImagesAttribute()
+    public function getNamaAttribute() { return $this->attributes['name'] ?? null; }
+    public function getHargaAttribute() { return $this->attributes['price'] ?? null; }
+    public function getDeskripsiAttribute() { return $this->attributes['description'] ?? null; }
+    public function getKategoriAttribute() { return $this->attributes['category'] ?? null; }
+    public function getKondisiAttribute() { return $this->attributes['condition'] ?? null; }
+    public function getIsBUAttribute() { return $this->attributes['is_bu'] ?? false; }
+    public function getStokAttribute() { return $this->attributes['stock'] ?? 0; }
+    public function getLokasiAttribute() { return $this->attributes['location'] ?? null; }
+
+    public function getImagesAttribute($value)
     {
-        // Ambil data mentah dari database untuk menghindari loop rekursif
-        $rawValue = $this->getRawOriginal('images');
-        if (empty($rawValue)) return [];
+        if (empty($value)) return [];
         
-        $images = is_array($rawValue) ? $rawValue : json_decode($rawValue, true);
-        if (!is_array($images)) return [];
+        $images = is_array($value) ? $value : json_decode($value, true);
+        if (!is_array($images)) {
+            // Jika bukan JSON (seperti link Unsplash di ID 1 & 2), kembalikan sebagai array tunggal
+            return [$value];
+        }
 
         $baseUrl = config('app.url') ?? 'https://api.thriftly.my.id';
 
@@ -61,21 +62,18 @@ class Product extends Model
                 return $imgStr;
             }
             
-            if (\Illuminate\Support\Str::startsWith($imgStr, '/storage')) {
-                return rtrim($baseUrl, '/') . $imgStr;
+            // Perbaikan path agar tidak double slash
+            $cleanPath = ltrim($imgStr, '/');
+            if (\Illuminate\Support\Str::startsWith($cleanPath, 'storage/')) {
+                return rtrim($baseUrl, '/') . '/' . $cleanPath;
             }
 
-            if (\Illuminate\Support\Str::startsWith($imgStr, 'products/')) {
-                return rtrim($baseUrl, '/') . '/storage/' . $imgStr;
+            if (\Illuminate\Support\Str::startsWith($cleanPath, 'products/')) {
+                return rtrim($baseUrl, '/') . '/storage/' . $cleanPath;
             }
 
             return $imgStr;
         }, $images);
-    }
-
-    public function getFotosAttribute()
-    {
-        return $this->images;
     }
 
     public function seller()
