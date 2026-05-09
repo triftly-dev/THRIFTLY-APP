@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'lokasi',
         'gender',
         'date_of_birth',
+        'phone_verified_at',
         'google_id',
         'google_token',
         'ktp_path',
@@ -55,6 +56,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
