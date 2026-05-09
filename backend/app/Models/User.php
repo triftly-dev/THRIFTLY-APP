@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
   use HasApiTokens, HasFactory, Notifiable;
@@ -26,7 +26,9 @@ class User extends Authenticatable
         'role',
         'alamat',
         'no_telp',
-        'lokasi'
+        'lokasi',
+        'google_id',
+        'google_token'
     ];
 
     /**

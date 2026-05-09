@@ -7,6 +7,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\OTPController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ScraperController;
@@ -20,6 +21,24 @@ use App\Http\Controllers\ScraperController;
 Route::get('/test-api', function() { return response()->json(['message' => 'API is working!']); });
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Routes Verifikasi Email
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
+Route::post('/email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
+    ->middleware(['auth:sanctum', 'throttle:6,1'])
+    ->name('verification.send');
+
+// Routes OTP Nomor Telepon
+Route::post('/otp/send', [OTPController::class, 'sendOTP']);
+Route::post('/otp/verify', [OTPController::class, 'verifyOTP']);
+
+// Routes Google Auth
+Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
