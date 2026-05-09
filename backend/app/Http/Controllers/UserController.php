@@ -18,20 +18,28 @@ class UserController extends Controller
         $user = $request->user();
 
         $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'no_telp' => 'nullable|string|max:20',
+            'gender' => 'nullable|in:L,P',
+            'date_of_birth' => 'nullable|date',
             'alamat' => 'nullable|string',
-            'no_telp' => 'nullable|string',
-            'lokasi' => 'nullable|string'
+            'lokasi' => 'nullable|string',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
-        $user->update([
-            'alamat' => $request->alamat,
-            'no_telp' => $request->no_telp,
-            'lokasi' => $request->lokasi,
-        ]);
+        $data = $request->only(['name', 'email', 'no_telp', 'gender', 'date_of_birth', 'alamat', 'lokasi']);
+
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $data['avatar'] = $path;
+        }
+
+        $user->update($data);
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'user' => $user
+            'user' => $user->fresh()
         ]);
     }
 
@@ -90,5 +98,43 @@ class UserController extends Controller
             'message' => 'User updated successfully.',
             'user' => $user
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Password saat ini salah.'], 422);
+        }
+
+        $user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($request->new_password)
+        ]);
+
+        return response()->json(['message' => 'Password berhasil diubah.']);
+    }
+
+    public function verifyKTP(Request $request)
+    {
+        $request->validate([
+            'ktp_image' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        $user = $request->user();
+        
+        $path = $request->file('ktp_image')->store('ktp_verifications', 'public');
+
+        $user->update([
+            'ktp_path' => $path,
+            'is_ktp_verified' => false // Menunggu persetujuan admin
+        ]);
+
+        return response()->json(['message' => 'Dokumen KTP berhasil diunggah. Mohon tunggu verifikasi admin.']);
     }
 }

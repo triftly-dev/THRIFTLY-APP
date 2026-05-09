@@ -22,13 +22,18 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'avatar',
         'password',
         'role',
         'alamat',
         'no_telp',
         'lokasi',
+        'gender',
+        'date_of_birth',
         'google_id',
-        'google_token'
+        'google_token',
+        'ktp_path',
+        'is_ktp_verified'
     ];
 
     /**

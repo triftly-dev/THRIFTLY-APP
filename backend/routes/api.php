@@ -58,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) { return $request->user(); });
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::get('/users', [UserController::class, 'index']); // List user untuk chat
+    Route::post('/user/change-password', [UserController::class, 'changePassword']);
+    Route::post('/user/verify-ktp', [UserController::class, 'verifyKTP']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // --- FITUR CHAT ---
