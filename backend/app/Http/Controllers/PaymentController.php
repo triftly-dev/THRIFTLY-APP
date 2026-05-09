@@ -251,10 +251,14 @@ class PaymentController extends Controller
                         $localTransaction->update(['status' => 'pending']);
                     } else {
                         $localTransaction->update(['status' => 'settlement']);
+                        // Otomatis tandai produk sebagai terjual
+                        $this->markProductAsSold($localTransaction->product_id);
                     }
                 }
             } else if ($transaction == 'settlement') {
                 $localTransaction->update(['status' => 'settlement']);
+                // Otomatis tandai produk sebagai terjual
+                $this->markProductAsSold($localTransaction->product_id);
             } else if ($transaction == 'pending') {
                 $localTransaction->update(['status' => 'pending']);
             } else if ($transaction == 'deny') {
@@ -278,5 +282,23 @@ class PaymentController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
         return response()->json($transactions);
+    }
+
+    /**
+     * Helper untuk menandai produk sebagai terjual
+     */
+    private function markProductAsSold($productId)
+    {
+        try {
+            $product = Product::find($productId);
+            if ($product) {
+                $product->status = 'sold';
+                $product->timestamps = false; // Hindari perubahan updated_at jika tidak diperlukan
+                $product->save();
+                Log::info("Produk ID {$productId} berhasil ditandai sebagai SOLD melalui Midtrans.");
+            }
+        } catch (Exception $e) {
+            Log::error("Gagal menandai produk ID {$productId} sebagai SOLD: " . $e->getMessage());
+        }
     }
 }
