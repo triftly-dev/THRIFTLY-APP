@@ -40,36 +40,42 @@ class Product extends Model
     public function getIsBUAttribute() { return $this->is_bu; }
     public function getStokAttribute() { return $this->stock; }
     public function getLokasiAttribute() { return $this->location; }
-    public function getFotosAttribute() { return $this->images; }
-
     // Mengubah atribut 'images' asli agar sinkron dengan frontend produksi
-    public function getImagesAttribute($value)
+    public function getImagesAttribute()
     {
-        if (empty($value)) return [];
+        // Ambil data mentah dari database untuk menghindari loop rekursif
+        $rawValue = $this->getRawOriginal('images');
+        if (empty($rawValue)) return [];
         
-        $images = is_array($value) ? $value : json_decode($value, true);
+        $images = is_array($rawValue) ? $rawValue : json_decode($rawValue, true);
         if (!is_array($images)) return [];
 
-        $baseUrl = config('app.url');
+        $baseUrl = config('app.url') ?? 'https://api.thriftly.my.id';
 
         return array_map(function ($img) use ($baseUrl) {
             if (empty($img)) return null;
             
-            // Menggunakan \Illuminate\Support\Str agar aman di semua versi PHP
-            if (\Illuminate\Support\Str::startsWith($img, 'data:image') || \Illuminate\Support\Str::startsWith($img, 'http')) {
-                return $img;
+            $imgStr = (string)$img;
+            
+            if (\Illuminate\Support\Str::startsWith($imgStr, 'data:image') || \Illuminate\Support\Str::startsWith($imgStr, 'http')) {
+                return $imgStr;
             }
             
-            if (\Illuminate\Support\Str::startsWith($img, '/storage')) {
-                return rtrim($baseUrl, '/') . $img;
+            if (\Illuminate\Support\Str::startsWith($imgStr, '/storage')) {
+                return rtrim($baseUrl, '/') . $imgStr;
             }
 
-            if (\Illuminate\Support\Str::startsWith($img, 'products/')) {
-                return \Illuminate\Support\Facades\Storage::disk('public')->url($img);
+            if (\Illuminate\Support\Str::startsWith($imgStr, 'products/')) {
+                return rtrim($baseUrl, '/') . '/storage/' . $imgStr;
             }
 
-            return $img;
+            return $imgStr;
         }, $images);
+    }
+
+    public function getFotosAttribute()
+    {
+        return $this->images;
     }
 
     public function seller()
