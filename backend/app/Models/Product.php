@@ -29,38 +29,46 @@ class Product extends Model
         'is_bu' => 'boolean',
     ];
 
-    protected $appends = ['fotos', 'seller_name'];
+    // Tambahkan appends agar field bahasa Indonesia selalu tersedia untuk frontend
+    protected $appends = ['nama', 'harga', 'deskripsi', 'kategori', 'kondisi', 'isBU', 'stok', 'lokasi', 'fotos'];
 
-    public function getFotosAttribute()
+    public function getNamaAttribute() { return $this->name; }
+    public function getHargaAttribute() { return $this->price; }
+    public function getDeskripsiAttribute() { return $this->description; }
+    public function getKategoriAttribute() { return $this->category; }
+    public function getKondisiAttribute() { return $this->condition; }
+    public function getIsBUAttribute() { return $this->is_bu; }
+    public function getStokAttribute() { return $this->stock; }
+    public function getLokasiAttribute() { return $this->location; }
+    public function getFotosAttribute() { return $this->images; }
+
+    // Mengubah atribut 'images' asli agar sinkron dengan frontend produksi
+    public function getImagesAttribute($value)
     {
-        $images = $this->images;
+        if (empty($value)) return [];
+        
+        $images = is_array($value) ? $value : json_decode($value, true);
         if (!is_array($images)) return [];
 
-        return array_map(function ($img) {
+        $baseUrl = config('app.url');
+
+        return array_map(function ($img) use ($baseUrl) {
             if (empty($img)) return null;
             
-            // Jika sudah base64, biarkan apa adanya
-            if (str_starts_with($img, 'data:image')) {
+            if (str_starts_with($img, 'data:image') || str_starts_with($img, 'http')) {
                 return $img;
             }
             
-            // Jika path (seperti /storage/products/...), pastikan jadi URL lengkap
             if (str_starts_with($img, '/storage')) {
-                return config('app.url') . $img;
+                return rtrim($baseUrl, '/') . $img;
             }
 
-            // Fallback untuk path tanpa slash di depan
             if (str_starts_with($img, 'products/')) {
                 return \Illuminate\Support\Facades\Storage::disk('public')->url($img);
             }
 
             return $img;
         }, $images);
-    }
-
-    public function getSellerNameAttribute()
-    {
-        return $this->seller->name ?? 'Penjual';
     }
 
     public function seller()
