@@ -227,11 +227,17 @@ class PaymentController extends Controller
 
     public function handleNotification(Request $request)
     {
+        // 1. Cek jika request kosong (untuk tombol 'Tes' di Dashboard Midtrans)
+        if (!$request->all()) {
+            return response()->json(['message' => 'Notification endpoint is reachable'], 200);
+        }
+
         try {
             $serverKey = trim(config('services.midtrans.server_key'));
             \Midtrans\Config::$serverKey = $serverKey;
-            \Midtrans\Config::$isProduction = config('services.midtrans.is_production');
+            \Midtrans\Config::$isProduction = (bool) config('services.midtrans.is_production');
 
+            // 2. Ambil notifikasi dari Midtrans
             $notif = new \Midtrans\Notification();
 
             $transaction = $notif->transaction_status;
@@ -239,40 +245,40 @@ class PaymentController extends Controller
             $orderId = $notif->order_id;
             $fraud = $notif->fraud_status;
 
+            Log::info("Midtrans Notification Received: OrderID: {$orderId}, Status: {$transaction}");
+
             $localTransaction = Transaction::where('order_id', $orderId)->first();
 
             if (!$localTransaction) {
-                return response()->json(['message' => 'Transaksi tidak ditemukan'], 404);
+                return response()->json(['message' => 'Transaksi tidak ditemukan'], 200); // Tetap 200 agar Midtrans tidak kirim ulang
             }
 
+            // 3. Update Status Transaksi
             if ($transaction == 'capture') {
                 if ($type == 'credit_card') {
                     if ($fraud == 'challenge') {
                         $localTransaction->update(['status' => 'pending']);
                     } else {
                         $localTransaction->update(['status' => 'settlement']);
-                        // Otomatis tandai produk sebagai terjual
                         $this->markProductAsSold($localTransaction->product_id);
                     }
                 }
             } else if ($transaction == 'settlement') {
                 $localTransaction->update(['status' => 'settlement']);
-                // Otomatis tandai produk sebagai terjual
                 $this->markProductAsSold($localTransaction->product_id);
             } else if ($transaction == 'pending') {
                 $localTransaction->update(['status' => 'pending']);
-            } else if ($transaction == 'deny') {
-                $localTransaction->update(['status' => 'deny']);
-            } else if ($transaction == 'expire') {
-                $localTransaction->update(['status' => 'expire']);
-            } else if ($transaction == 'cancel') {
-                $localTransaction->update(['status' => 'cancel']);
+            } else if ($transaction == 'deny' || $transaction == 'expire' || $transaction == 'cancel') {
+                $localTransaction->update(['status' => $transaction]);
             }
 
-            return response()->json(['message' => 'Success']);
+            return response()->json(['message' => 'Notification processed successfully'], 200);
 
         } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 500);
+            Log::error('MIDTRANS CALLBACK ERROR: ' . $e->getMessage());
+            // Berikan 200 OK meskipun error agar Midtrans berhenti mencoba (mencegah beban server)
+            // Namun log tetap kita simpan untuk debug
+            return response()->json(['message' => 'Error processed', 'error' => $e->getMessage()], 200);
         }
     }
 
