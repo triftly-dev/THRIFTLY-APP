@@ -29,11 +29,38 @@ class Product extends Model
         'is_bu' => 'boolean',
     ];
 
-    protected $appends = ['fotos'];
+    protected $appends = ['fotos', 'seller_name'];
 
     public function getFotosAttribute()
     {
-        return $this->images ?? [];
+        $images = $this->images;
+        if (!is_array($images)) return [];
+
+        return array_map(function ($img) {
+            if (empty($img)) return null;
+            
+            // Jika sudah base64, biarkan apa adanya
+            if (str_starts_with($img, 'data:image')) {
+                return $img;
+            }
+            
+            // Jika path (seperti /storage/products/...), pastikan jadi URL lengkap
+            if (str_starts_with($img, '/storage')) {
+                return config('app.url') . $img;
+            }
+
+            // Fallback untuk path tanpa slash di depan
+            if (str_starts_with($img, 'products/')) {
+                return \Illuminate\Support\Facades\Storage::disk('public')->url($img);
+            }
+
+            return $img;
+        }, $images);
+    }
+
+    public function getSellerNameAttribute()
+    {
+        return $this->seller->name ?? 'Penjual';
     }
 
     public function seller()

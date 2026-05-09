@@ -127,9 +127,20 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        // Cari produk berdasarkan ID beserta data detail penjualnya
-        $product = Product::with('seller')->findOrFail($id);
-        return response()->json($product);
+        try {
+            // Gunakan select untuk membatasi kolom yang ditarik agar memori VPS aman
+            $product = Product::with(['seller' => function($query) {
+                $query->select('id', 'name', 'lokasi', 'created_at');
+            }])->findOrFail($id);
+            
+            return response()->json($product);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Gagal mengambil detail produk ID {$id}: " . $e->getMessage());
+            return response()->json([
+                'message' => 'Gagal memuat data produk. Pastikan format data benar.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy($id)
