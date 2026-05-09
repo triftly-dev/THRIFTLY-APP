@@ -55,15 +55,16 @@ class Product extends Model
         return array_map(function ($img) use ($baseUrl) {
             if (empty($img)) return null;
             
-            if (str_starts_with($img, 'data:image') || str_starts_with($img, 'http')) {
+            // Menggunakan \Illuminate\Support\Str agar aman di semua versi PHP
+            if (\Illuminate\Support\Str::startsWith($img, 'data:image') || \Illuminate\Support\Str::startsWith($img, 'http')) {
                 return $img;
             }
             
-            if (str_starts_with($img, '/storage')) {
+            if (\Illuminate\Support\Str::startsWith($img, '/storage')) {
                 return rtrim($baseUrl, '/') . $img;
             }
 
-            if (str_starts_with($img, 'products/')) {
+            if (\Illuminate\Support\Str::startsWith($img, 'products/')) {
                 return \Illuminate\Support\Facades\Storage::disk('public')->url($img);
             }
 
