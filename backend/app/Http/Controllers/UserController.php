@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use App\Mail\AdminKtpUploaded;
 use App\Mail\UserKtpStatusUpdated;
+use App\Mail\UserKtpUploaded;
 
 class UserController extends Controller
 {
@@ -152,7 +153,7 @@ class UserController extends Controller
         ]);
 
         // Kirim email ke User (Konfirmasi Upload)
-        Mail::to($user->email)->send(new \App\Mail\UserKtpUploaded($user));
+        Mail::to($user->email)->send(new UserKtpUploaded($user));
 
         // Kirim email ke semua Admin
         $admins = User::where('role', 'admin')->get();
