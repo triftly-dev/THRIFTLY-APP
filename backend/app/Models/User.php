@@ -34,6 +34,12 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'google_token',
         'ktp_path',
+        'ktp_nik',
+        'ktp_name',
+        'ktp_birth_place',
+        'ktp_birth_date',
+        'ktp_status',
+        'ktp_rejection_reason',
         'is_ktp_verified'
     ];
 
