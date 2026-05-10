@@ -151,6 +151,9 @@ class UserController extends Controller
             'is_ktp_verified' => false
         ]);
 
+        // Kirim email ke User (Konfirmasi Upload)
+        Mail::to($user->email)->send(new \App\Mail\UserKtpUploaded($user));
+
         // Kirim email ke semua Admin
         $admins = User::where('role', 'admin')->get();
         foreach ($admins as $admin) {
