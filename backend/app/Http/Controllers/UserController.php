@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use App\Mail\AdminKtpUploaded;
+use App\Mail\UserKtpStatusUpdated;
 
 class UserController extends Controller
 {
@@ -150,7 +154,7 @@ class UserController extends Controller
         // Kirim email ke semua Admin
         $admins = User::where('role', 'admin')->get();
         foreach ($admins as $admin) {
-            \Illuminate\Support\Facades\Mail::to($admin->email)->send(new \App\Mail\AdminKtpUploaded($user));
+            Mail::to($admin->email)->send(new AdminKtpUploaded($user));
         }
 
         return response()->json(['message' => 'Dokumen KTP berhasil diunggah. Mohon tunggu verifikasi admin.']);
@@ -167,7 +171,7 @@ class UserController extends Controller
         ]);
 
         // Kirim email ke User
-        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\UserKtpStatusUpdated($user));
+        Mail::to($user->email)->send(new UserKtpStatusUpdated($user));
 
         return response()->json(['message' => 'Verifikasi KTP disetujui.']);
     }
@@ -187,7 +191,7 @@ class UserController extends Controller
         ]);
 
         // Kirim email ke User
-        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\UserKtpStatusUpdated($user));
+        Mail::to($user->email)->send(new UserKtpStatusUpdated($user));
 
         return response()->json(['message' => 'Verifikasi KTP ditolak.']);
     }
