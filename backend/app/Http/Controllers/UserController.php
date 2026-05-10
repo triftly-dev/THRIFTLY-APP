@@ -20,7 +20,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'no_telp' => 'nullable|string|max:20',
+            'no_telp' => 'nullable|string|max:20|unique:users,no_telp,' . $user->id,
             'gender' => 'nullable|in:L,P',
             'date_of_birth' => 'nullable|date',
             'alamat' => 'nullable|string',
@@ -123,7 +123,14 @@ class UserController extends Controller
     public function verifyKTP(Request $request)
     {
         $request->validate([
-            'ktp_image' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+            'ktp_image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+            'ktp_nik' => 'required|string|size:16|unique:users,ktp_nik,' . Auth::id(),
+            'ktp_name' => 'required|string|max:255',
+            'ktp_birth_place' => 'required|string|max:255',
+            'ktp_birth_date' => 'required|date',
+        ], [
+            'ktp_nik.unique' => 'NIK ini sudah terdaftar di akun lain!',
+            'ktp_nik.size' => 'NIK harus berjumlah 16 digit.',
         ]);
 
         $user = $request->user();
@@ -132,9 +139,56 @@ class UserController extends Controller
 
         $user->update([
             'ktp_path' => $path,
-            'is_ktp_verified' => false // Menunggu persetujuan admin
+            'ktp_nik' => $request->ktp_nik,
+            'ktp_name' => $request->ktp_name,
+            'ktp_birth_place' => $request->ktp_birth_place,
+            'ktp_birth_date' => $request->ktp_birth_date,
+            'ktp_status' => 'pending',
+            'is_ktp_verified' => false
         ]);
 
+        // Kirim email ke semua Admin
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            \Illuminate\Support\Facades\Mail::to($admin->email)->send(new \App\Mail\AdminKtpUploaded($user));
+        }
+
         return response()->json(['message' => 'Dokumen KTP berhasil diunggah. Mohon tunggu verifikasi admin.']);
+    }
+
+    public function approveKTP(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        
+        $user->update([
+            'ktp_status' => 'verified',
+            'is_ktp_verified' => true,
+            // 'role' => 'seller' // Opsional: otomatis jadi seller
+        ]);
+
+        // Kirim email ke User
+        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\UserKtpStatusUpdated($user));
+
+        return response()->json(['message' => 'Verifikasi KTP disetujui.']);
+    }
+
+    public function rejectKTP(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string'
+        ]);
+
+        $user = User::findOrFail($id);
+        
+        $user->update([
+            'ktp_status' => 'rejected',
+            'is_ktp_verified' => false,
+            'ktp_rejection_reason' => $request->reason
+        ]);
+
+        // Kirim email ke User
+        \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\UserKtpStatusUpdated($user));
+
+        return response()->json(['message' => 'Verifikasi KTP ditolak.']);
     }
 }

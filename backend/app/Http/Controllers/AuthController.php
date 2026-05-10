@@ -37,12 +37,17 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            'no_telp' => 'required|string|max:20|unique:users',
             'password' => 'required|string|min:8|confirmed',
+        ], [
+            'email.unique' => 'Email ini sudah terdaftar!',
+            'no_telp.unique' => 'Nomor HP ini sudah terdaftar!',
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
+            'no_telp' => $request->no_telp,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'buyer',
         ]);

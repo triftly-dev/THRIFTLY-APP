@@ -111,6 +111,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admin/users/{id}', [UserController::class, 'destroy']); // Contoh fitur admin delete user
         Route::put('/admin/users/{id}', [UserController::class, 'updateAdmin']);
         Route::get('/admin/transactions', [PaymentController::class, 'adminTransactions']);
+        Route::put('/admin/users/{id}/approve-ktp', [UserController::class, 'approveKTP']);
+        Route::put('/admin/users/{id}/reject-ktp', [UserController::class, 'rejectKTP']);
     });
 
     // --- FITUR SCRAPER ---
