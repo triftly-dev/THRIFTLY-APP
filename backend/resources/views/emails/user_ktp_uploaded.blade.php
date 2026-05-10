@@ -7,7 +7,7 @@
     <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; rounded: 10px;">
         <h2 style="color: #f59e0b;">Halo {{ $user->name }},</h2>
         <p>Terima kasih telah mengirimkan dokumen KTP Anda untuk verifikasi identitas di Thriftly.</p>
-        <p>Saat ini dokumen Anda **sedang dalam antrean peninjauan oleh tim Admin kami**. Proses ini biasanya memakan waktu 1-3 hari kerja.</p>
+        <p>Saat ini dokumen Anda **sedang dalam antrean peninjauan oleh tim Admin kami**. Proses ini biasanya memakan waktu **1-2 hari kerja**.</p>
         
         <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p style="margin: 0; font-weight: bold; color: #92400e;">Status: Menunggu Verifikasi</p>
