@@ -73,13 +73,18 @@ class AuthController extends Controller
         if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return response()->json(['message' => 'Invalid link'], 403);
         }
+        $frontendUrl = config('app.frontend_url');
+        if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
+            $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+        }
+
         if ($user->hasVerifiedEmail()) {
-            return redirect(config('app.frontend_url') . '/login?verified=1');
+            return redirect($frontendUrl . '/login?verified=1');
         }
         if ($user->markEmailAsVerified()) {
             event(new \Illuminate\Auth\Events\Verified($user));
         }
-        return redirect(config('app.frontend_url') . '/login?verified=1');
+        return redirect($frontendUrl . '/login?verified=1');
     }
 
     public function resendVerificationEmail(Request $request)
@@ -120,12 +125,20 @@ class AuthController extends Controller
             
             // Tangkap kembali URL asal dari parameter 'state' yang dikirim balik oleh Google
             $state = $request->input('state');
-            $targetUrl = config('app.frontend_url'); // Default dari .env
+            $frontendUrl = config('app.frontend_url');
+            if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
+                $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+            }
+            $targetUrl = $frontendUrl; // Default
 
             if ($state) {
                 parse_str($state, $result);
                 if (isset($result['frontend_url'])) {
                     $targetUrl = $result['frontend_url'];
+                    // Jaga-jaga jika targetUrl dari state juga masih yang lama
+                    if (str_contains($targetUrl, 'thrifty-app-frontend.vercel.app')) {
+                        $targetUrl = str_replace('thrifty-app-frontend.vercel.app', 'thrifty-marketplace.vercel.app', $targetUrl);
+                    }
                 }
             }
             
@@ -156,7 +169,11 @@ class AuthController extends Controller
             return redirect($targetUrl . '/login-success?token=' . $token);
 
         } catch (\Exception $e) {
-            return redirect(config('app.frontend_url') . '/login?error=google_failed');
+            $frontendUrl = config('app.frontend_url');
+            if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
+                $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+            }
+            return redirect($frontendUrl . '/login?error=google_failed');
         }
     }
 }
