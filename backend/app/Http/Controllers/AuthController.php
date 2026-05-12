@@ -90,15 +90,40 @@ class AuthController extends Controller
         return response()->json(['message' => 'Sent']);
     }
 
-    public function redirectToGoogle()
+    public function redirectToGoogle(Request $request)
     {
+        // Ambil URL asal dari query parameter atau header Referer
+        $frontendUrl = $request->query('frontend_url') ?? $request->header('Referer');
+        
+        // Bersihkan trailing slash jika ada
+        $frontendUrl = rtrim($frontendUrl, '/');
+
+        // Jika URL valid, kirimkan sebagai 'state' ke Google
+        if ($frontendUrl) {
+            return Socialite::driver('google')
+                ->stateless()
+                ->with(['state' => 'frontend_url=' . $frontendUrl])
+                ->redirect();
+        }
+
         return Socialite::driver('google')->stateless()->redirect();
     }
 
-    public function handleGoogleCallback()
+    public function handleGoogleCallback(Request $request)
     {
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
+            
+            // Tangkap kembali URL asal dari parameter 'state' yang dikirim balik oleh Google
+            $state = $request->input('state');
+            $targetUrl = config('app.frontend_url'); // Default dari .env
+
+            if ($state) {
+                parse_str($state, $result);
+                if (isset($result['frontend_url'])) {
+                    $targetUrl = $result['frontend_url'];
+                }
+            }
             
             $user = User::where('google_id', $googleUser->id)
                         ->orWhere('email', $googleUser->email)
@@ -124,7 +149,7 @@ class AuthController extends Controller
             Auth::login($user);
             $token = $user->createToken('auth_token')->plainTextToken;
 
-            return redirect(config('app.frontend_url') . '/login-success?token=' . $token);
+            return redirect($targetUrl . '/login-success?token=' . $token);
 
         } catch (\Exception $e) {
             return redirect(config('app.frontend_url') . '/login?error=google_failed');
