@@ -138,7 +138,7 @@ class AuthController extends Controller
                     'password' => bcrypt(Str::random(16)),
                     'role' => 'buyer',
                 ]);
-                $user->markEmailAsVerified();
+                $user->sendEmailVerificationNotification();
             } else {
                 $user->update([
                     'google_id' => $googleUser->id,
