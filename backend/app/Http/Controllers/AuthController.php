@@ -2,46 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
-
-        if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Email atau password salah'], 401);
-        }
-
-        $user = Auth::user();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'user' => $user,
-            'email_verified' => $user->hasVerifiedEmail(),
-        ]);
-    }
-
     public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'no_telp' => 'required|string|max:20|unique:users',
+            'no_telp' => 'required|string|max:15',
             'password' => 'required|string|min:8|confirmed',
-        ], [
-            'email.unique' => 'Email ini sudah terdaftar!',
-            'no_telp.unique' => 'Nomor HP ini sudah terdaftar!',
         ]);
 
         $user = User::create([
@@ -53,7 +29,7 @@ class AuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        // Kirim notification dengan membawa URL asal (referer)
+        // Kirim notification dengan membawa URL asal (referer) agar redirect benar
         $frontendUrl = $request->header('Referer') ?? config('app.frontend_url');
         $user->notify(new \App\Notifications\VerifyEmailIndo($frontendUrl));
 
@@ -61,6 +37,33 @@ class AuthController extends Controller
             'message' => 'Registrasi Berhasil! Silakan cek email Anda untuk verifikasi.',
             'user' => $user
         ], 201);
+    }
+
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json(['message' => 'Email atau password salah'], 401);
+        }
+
+        $user = User::where('email', $request->email)->first();
+        
+        if (!$user->email_verified_at) {
+            return response()->json(['message' => 'Silakan verifikasi email Anda terlebih dahulu'], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Berhasil Masuk',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user
+        ]);
     }
 
     public function logout(Request $request)
@@ -72,20 +75,23 @@ class AuthController extends Controller
     public function verifyEmail(Request $request, $id, $hash)
     {
         $user = User::findOrFail($id);
+        
         if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-            return response()->json(['message' => 'Invalid link'], 403);
+            return response()->json(['message' => 'Invalid link signature'], 403);
         }
 
-        // Ambil redirect_url dari query parameter jika ada, fallback ke config
+        // Ambil redirect_url dari parameter yang sudah di-sign
         $targetUrl = $request->query('redirect_url') ?? config('app.frontend_url');
         $targetUrl = rtrim($targetUrl, '/');
 
         if ($user->hasVerifiedEmail()) {
             return redirect($targetUrl . '/login?verified=1');
         }
+
         if ($user->markEmailAsVerified()) {
             event(new \Illuminate\Auth\Events\Verified($user));
         }
+
         return redirect($targetUrl . '/login?verified=1');
     }
 
@@ -95,33 +101,14 @@ class AuthController extends Controller
             return response()->json(['message' => 'Already verified']);
         }
 
-        // Ambil URL asal dari input, header referer, atau config default
         $frontendUrl = $request->input('frontend_url') ?? $request->header('Referer') ?? config('app.frontend_url');
-        
         $request->user()->notify(new \App\Notifications\VerifyEmailIndo($frontendUrl));
         
         return response()->json(['message' => 'Sent']);
     }
 
-    public function redirectToGoogle(Request $request)
+    public function redirectToGoogle()
     {
-        // Ambil URL asal dari query parameter atau header Referer
-        $frontendUrl = $request->query('frontend_url') ?? $request->header('Referer');
-        
-        // Bersihkan trailing slash jika ada
-        $frontendUrl = rtrim($frontendUrl, '/');
-
-        // Jika URL valid, kirimkan sebagai 'state' ke Google
-        if ($frontendUrl) {
-            return Socialite::driver('google')
-                ->stateless()
-                ->with([
-                    'state' => 'frontend_url=' . $frontendUrl,
-                    'prompt' => 'select_account'
-                ])
-                ->redirect();
-        }
-
         return Socialite::driver('google')->stateless()->redirect();
     }
 
@@ -130,50 +117,36 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
             
-            // Tangkap kembali URL asal dari parameter 'state' yang dikirim balik oleh Google
-            $state = $request->input('state');
+            // Logika redirect dinamis untuk Google
             $frontendUrl = config('app.frontend_url');
             if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
                 $frontendUrl = 'https://thriftly-marketplace.vercel.app';
             }
-            $targetUrl = $frontendUrl; // Default
 
-            if ($state) {
-                parse_str($state, $result);
-                if (isset($result['frontend_url'])) {
-                    $targetUrl = $result['frontend_url'];
-                    // Jaga-jaga jika targetUrl dari state juga masih yang lama
-                    if (str_contains($targetUrl, 'thrifty-app-frontend.vercel.app')) {
-                        $targetUrl = str_replace('thrifty-app-frontend.vercel.app', 'thriftly-marketplace.vercel.app', $targetUrl);
-                    }
-                }
-            }
-            
             $user = User::where('google_id', $googleUser->id)
-                        ->orWhere('email', $googleUser->email)
-                        ->first();
+                ->orWhere('email', $googleUser->email)
+                ->first();
 
             if (!$user) {
                 $user = User::create([
                     'name' => $googleUser->name,
                     'email' => $googleUser->email,
                     'google_id' => $googleUser->id,
-                    'google_token' => $googleUser->token,
-                    'password' => bcrypt(Str::random(16)),
-                    'role' => 'buyer',
+                    'password' => bcrypt(str_random(16)),
+                    'email_verified_at' => now(),
+                    'role' => 'buyer'
                 ]);
-                $user->markEmailAsVerified();
             } else {
-                $user->update([
-                    'google_id' => $googleUser->id,
-                    'google_token' => $googleUser->token,
-                ]);
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleUser->id]);
+                }
+                if (!$user->email_verified_at) {
+                    $user->update(['email_verified_at' => now()]);
+                }
             }
 
-            Auth::login($user);
             $token = $user->createToken('auth_token')->plainTextToken;
-
-            return redirect($targetUrl . '/login-success?token=' . $token);
+            return redirect($frontendUrl . '/login-success?token=' . $token);
 
         } catch (\Exception $e) {
             $frontendUrl = config('app.frontend_url');
