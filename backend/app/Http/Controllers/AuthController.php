@@ -75,7 +75,7 @@ class AuthController extends Controller
         }
         $frontendUrl = config('app.frontend_url');
         if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-            $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+            $frontendUrl = 'https://thriftly-marketplace.vercel.app';
         }
 
         if ($user->hasVerifiedEmail()) {
@@ -127,7 +127,7 @@ class AuthController extends Controller
             $state = $request->input('state');
             $frontendUrl = config('app.frontend_url');
             if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-                $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+                $frontendUrl = 'https://thriftly-marketplace.vercel.app';
             }
             $targetUrl = $frontendUrl; // Default
 
@@ -137,7 +137,7 @@ class AuthController extends Controller
                     $targetUrl = $result['frontend_url'];
                     // Jaga-jaga jika targetUrl dari state juga masih yang lama
                     if (str_contains($targetUrl, 'thrifty-app-frontend.vercel.app')) {
-                        $targetUrl = str_replace('thrifty-app-frontend.vercel.app', 'thrifty-marketplace.vercel.app', $targetUrl);
+                        $targetUrl = str_replace('thrifty-app-frontend.vercel.app', 'thriftly-marketplace.vercel.app', $targetUrl);
                     }
                 }
             }
@@ -171,7 +171,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             $frontendUrl = config('app.frontend_url');
             if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-                $frontendUrl = 'https://thrifty-marketplace.vercel.app';
+                $frontendUrl = 'https://thriftly-marketplace.vercel.app';
             }
             return redirect($frontendUrl . '/login?error=google_failed');
         }
