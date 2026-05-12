@@ -50,6 +50,7 @@ class AuthController extends Controller
             'no_telp' => $request->no_telp,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'buyer',
+            'email_verified_at' => null, // Paksa jadi NULL untuk pendaftaran manual
         ]);
 
         $user->sendEmailVerificationNotification();
