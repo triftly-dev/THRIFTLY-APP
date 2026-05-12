@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\Lang;
 
 class VerifyEmailIndo extends VerifyEmailBase
 {
+    public $frontendUrl;
+
+    public function __construct($frontendUrl = null)
+    {
+        $this->frontendUrl = $frontendUrl;
+    }
+
     /**
      * Get the mail representation of the notification.
      */
@@ -22,5 +29,24 @@ class VerifyEmailIndo extends VerifyEmailBase
             ->action(Lang::get('Verifikasi Email'), $verificationUrl)
             ->line(Lang::get('Jika Anda tidak membuat akun, tidak ada tindakan lebih lanjut yang diperlukan.'))
             ->salutation('Salam hangat, Tim Thriftly');
+    }
+
+    /**
+     * Get the verification URL for the given notifiable.
+     *
+     * @param  mixed  $notifiable
+     * @return string
+     */
+    protected function verificationUrl($notifiable)
+    {
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'verification.verify',
+            \Illuminate\Support\Carbon::now()->addMinutes(config('auth.verification.expire', 60)),
+            [
+                'id' => $notifiable->getKey(),
+                'hash' => sha1($notifiable->getEmailForVerification()),
+                'redirect_url' => $this->frontendUrl, // Tambahkan parameter redirect
+            ]
+        );
     }
 }

@@ -50,10 +50,12 @@ class AuthController extends Controller
             'no_telp' => $request->no_telp,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'buyer',
-            'email_verified_at' => null, // Paksa jadi NULL untuk pendaftaran manual
+            'email_verified_at' => null,
         ]);
 
-        $user->sendEmailVerificationNotification();
+        // Kirim notification dengan membawa URL asal (referer)
+        $frontendUrl = $request->header('Referer') ?? config('app.frontend_url');
+        $user->notify(new \App\Notifications\VerifyEmailIndo($frontendUrl));
 
         return response()->json([
             'message' => 'Registrasi Berhasil! Silakan cek email Anda untuk verifikasi.',
@@ -73,18 +75,18 @@ class AuthController extends Controller
         if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
             return response()->json(['message' => 'Invalid link'], 403);
         }
-        $frontendUrl = config('app.frontend_url');
-        if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-            $frontendUrl = 'https://thriftly-marketplace.vercel.app';
-        }
+
+        // Ambil redirect_url dari query parameter jika ada, fallback ke config
+        $targetUrl = $request->query('redirect_url') ?? config('app.frontend_url');
+        $targetUrl = rtrim($targetUrl, '/');
 
         if ($user->hasVerifiedEmail()) {
-            return redirect($frontendUrl . '/login?verified=1');
+            return redirect($targetUrl . '/login?verified=1');
         }
         if ($user->markEmailAsVerified()) {
             event(new \Illuminate\Auth\Events\Verified($user));
         }
-        return redirect($frontendUrl . '/login?verified=1');
+        return redirect($targetUrl . '/login?verified=1');
     }
 
     public function resendVerificationEmail(Request $request)
@@ -92,7 +94,12 @@ class AuthController extends Controller
         if ($request->user()->hasVerifiedEmail()) {
             return response()->json(['message' => 'Already verified']);
         }
-        $request->user()->sendEmailVerificationNotification();
+
+        // Ambil URL asal dari input, header referer, atau config default
+        $frontendUrl = $request->input('frontend_url') ?? $request->header('Referer') ?? config('app.frontend_url');
+        
+        $request->user()->notify(new \App\Notifications\VerifyEmailIndo($frontendUrl));
+        
         return response()->json(['message' => 'Sent']);
     }
 
