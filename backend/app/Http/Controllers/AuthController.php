@@ -102,7 +102,10 @@ class AuthController extends Controller
         if ($frontendUrl) {
             return Socialite::driver('google')
                 ->stateless()
-                ->with(['state' => 'frontend_url=' . $frontendUrl])
+                ->with([
+                    'state' => 'frontend_url=' . $frontendUrl,
+                    'prompt' => 'select_account'
+                ])
                 ->redirect();
         }
 
