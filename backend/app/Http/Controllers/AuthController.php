@@ -55,11 +55,6 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $request->email)->first();
-        
-        if (!$user->email_verified_at) {
-            return response()->json(['message' => 'Silakan verifikasi email Anda terlebih dahulu'], 403);
-        }
-
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
