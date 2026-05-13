@@ -39,7 +39,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registrasi Berhasil! Silakan cek email Anda untuk verifikasi.',
-            'user' => $user
+            'user' => $user->fresh()
         ], 201);
     }
 
@@ -61,7 +61,7 @@ class AuthController extends Controller
             'message' => 'Berhasil Masuk',
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user
+            'user' => $user->fresh()
         ]);
     }
 

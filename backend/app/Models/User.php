@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'lokasi',
         'gender',
         'date_of_birth',
+        'email_verified_at',
         'phone_verified_at',
         'google_id',
         'google_token',
