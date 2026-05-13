@@ -21,7 +21,13 @@ class OTPController extends Controller
             'email' => 'nullable|email',
         ]);
 
-        $identifier = $request->email ?: $request->phone;
+        // Normalisasi nomor telepon (08xxx -> 628xxx)
+        $phone = $request->phone;
+        if ($phone && str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        $identifier = $request->email ?: $phone;
         if (!$identifier) {
             return response()->json(['message' => 'Email atau Nomor HP wajib diisi.'], 400);
         }
@@ -30,15 +36,14 @@ class OTPController extends Controller
 
         // Simpan ke database
         OtpCode::updateOrCreate(
-            ['phone' => $request->phone, 'email' => $request->email],
+            ['phone' => $phone, 'email' => $request->email],
             [
                 'code' => $code,
-                'expires_at' => Carbon::now()->addMinutes(10), // Perpanjang ke 10 menit
+                'expires_at' => Carbon::now()->addMinutes(10),
             ]
         );
 
         if ($request->email) {
-            // KIRIM VIA EMAIL
             try {
                 \Illuminate\Support\Facades\Mail::to($request->email)->send(new \App\Mail\OtpVerification($code));
                 return response()->json(['message' => 'Kode verifikasi telah dikirim ke email Anda.']);
@@ -47,13 +52,12 @@ class OTPController extends Controller
                 return response()->json(['message' => 'Gagal mengirim email verifikasi.'], 500);
             }
         } else {
-            // KIRIM VIA FONNTE (WhatsApp API)
-            $token = env('FONNTE_TOKEN', 'YOUR_TOKEN_HERE');
+            $token = env('FONNTE_TOKEN');
             
             $response = Http::withHeaders([
                 'Authorization' => $token,
             ])->post('https://api.fonnte.com/send', [
-                'target' => $request->phone,
+                'target' => $phone,
                 'message' => "Kode OTP Thriftly Anda adalah: $code. JANGAN BERIKAN KODE INI KEPADA SIAPAPUN. Berlaku 10 menit.",
             ]);
 
@@ -66,9 +70,6 @@ class OTPController extends Controller
         }
     }
 
-    /**
-     * Memverifikasi kode OTP yang diinput user
-     */
     public function verifyOTP(Request $request)
     {
         $request->validate([
@@ -77,44 +78,57 @@ class OTPController extends Controller
             'code' => 'required|string',
         ]);
 
+        // Normalisasi nomor telepon jika ada
+        $phone = $request->phone;
+        if ($phone && str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        // Cek OTP
         $query = OtpCode::where('code', $request->code)
             ->where('expires_at', '>', Carbon::now());
 
         if ($request->email) {
             $query->where('email', $request->email);
-        } else {
-            $query->where('phone', $request->phone);
+        } elseif ($phone) {
+            $query->where('phone', $phone);
         }
 
         $otp = $query->first();
+
+        // JIKA TIDAK KETEMU lewat phone/email eksplisit, coba cari kode saja (untuk user yang sedang login)
+        if (!$otp) {
+            $otp = OtpCode::where('code', $request->code)
+                ->where('expires_at', '>', Carbon::now())
+                ->first();
+        }
 
         if (!$otp) {
             return response()->json(['message' => 'Kode OTP salah atau sudah kadaluarsa.'], 400);
         }
 
-        // Jika OK, hapus OTP agar tidak dipakai lagi
+        // Jika OK, hapus OTP
         $otp->delete();
 
-        // Tandai sebagai terverifikasi di tabel users
+        // Tandai sebagai terverifikasi
         $user = auth()->user();
         
         if (!$user) {
-            // Jika tidak login, cari berdasarkan email/phone
             if ($request->email) {
                 $user = User::where('email', $request->email)->first();
-            } else {
-                $user = User::where('no_telp', $request->phone)->first();
+            } elseif ($phone) {
+                $user = User::where('no_telp', $phone)->first();
             }
         }
 
         if ($user) {
-            if ($request->email) {
+            if ($request->email || $otp->email) {
                 $user->update(['email_verified_at' => now()]);
             } else {
                 $user->update(['phone_verified_at' => now()]);
             }
         }
 
-        return response()->json(['message' => 'Verifikasi berhasil!']);
+        return response()->json(['message' => 'Verifikasi berhasil!', 'user' => $user ? $user->fresh() : null]);
     }
 }
