@@ -122,13 +122,17 @@ class OTPController extends Controller
         }
 
         if ($user) {
-            if ($request->email || $otp->email) {
+            // Logika perbaikan: Cek apakah OTP yang diverifikasi milik Email atau Phone
+            if ($otp->email) {
                 $user->update(['email_verified_at' => now()]);
-            } else {
+            } elseif ($otp->phone) {
                 $user->update(['phone_verified_at' => now()]);
             }
         }
 
-        return response()->json(['message' => 'Verifikasi berhasil!', 'user' => $user ? $user->fresh() : null]);
+        return response()->json([
+            'message' => 'Verifikasi berhasil!', 
+            'user' => $user ? $user->fresh() : null
+        ]);
     }
 }
