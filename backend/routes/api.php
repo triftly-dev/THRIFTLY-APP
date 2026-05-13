@@ -22,11 +22,7 @@ Route::get('/test-api', function() { return response()->json(['message' => 'API 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Routes Verifikasi Email
-Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-    ->middleware(['signed', 'throttle:6,1'])
-    ->name('verification.verify');
-
+// Routes Verifikasi Email (Route GET dipindah ke web.php agar tidak ada prefix /api/)
 Route::post('/email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
     ->middleware(['auth:sanctum', 'throttle:1,1'])
     ->name('verification.send');

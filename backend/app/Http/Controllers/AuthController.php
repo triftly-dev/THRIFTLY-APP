@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -29,8 +30,11 @@ class AuthController extends Controller
             'email_verified_at' => null,
         ]);
 
-        // Kirim notification dengan membawa URL asal (referer) agar redirect benar
-        $frontendUrl = $request->header('Referer') ?? config('app.frontend_url');
+        // Kirim notification dengan membawa URL asal agar redirect benar
+        // Prioritas: body request > Referer header > config default
+        $frontendUrl = $request->input('frontend_url')
+            ?? $request->header('Referer')
+            ?? config('app.frontend_url');
         $user->notify(new \App\Notifications\VerifyEmailIndo($frontendUrl));
 
         return response()->json([
@@ -75,19 +79,26 @@ class AuthController extends Controller
     public function verifyEmail(Request $request, $id, $hash)
     {
         $user = User::findOrFail($id);
-        
+
+        // Validasi hash email (cek apakah link sesuai dengan user)
+        // Middleware 'signed' sudah memvalidasi signature URL secara keseluruhan
         if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-            return response()->json(['message' => 'Invalid link signature'], 403);
+            // Jika hash tidak cocok, redirect ke frontend dengan pesan error
+            $errorUrl = $request->query('redirect_url') ?? config('app.frontend_url');
+            $errorUrl = rtrim($errorUrl, '/');
+            return redirect($errorUrl . '/login?error=invalid_hash');
         }
 
-        // Ambil redirect_url dari parameter yang sudah di-sign
+        // Ambil redirect_url dari parameter yang sudah di-sign bersama URL
         $targetUrl = $request->query('redirect_url') ?? config('app.frontend_url');
         $targetUrl = rtrim($targetUrl, '/');
 
+        // Jika sudah terverifikasi sebelumnya, langsung redirect
         if ($user->hasVerifiedEmail()) {
-            return redirect($targetUrl . '/login?verified=1');
+            return redirect($targetUrl . '/login?verified=1&already=true');
         }
 
+        // Tandai email sebagai terverifikasi
         if ($user->markEmailAsVerified()) {
             event(new \Illuminate\Auth\Events\Verified($user));
         }
@@ -132,7 +143,7 @@ class AuthController extends Controller
                     'name' => $googleUser->name,
                     'email' => $googleUser->email,
                     'google_id' => $googleUser->id,
-                    'password' => bcrypt(str_random(16)),
+                    'password' => bcrypt(Str::random(16)),
                     'email_verified_at' => now(),
                     'role' => 'buyer'
                 ]);
