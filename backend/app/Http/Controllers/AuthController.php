@@ -88,9 +88,9 @@ class AuthController extends Controller
         $targetUrl = $request->query('redirect_url') ?? config('app.frontend_url');
         $targetUrl = rtrim($targetUrl, '/');
 
-        // Jika sudah terverifikasi sebelumnya, langsung redirect
+        // Jika sudah terverifikasi sebelumnya, langsung redirect ke pengaturan
         if ($user->hasVerifiedEmail()) {
-            return redirect($targetUrl . '/login?verified=1&already=true');
+            return redirect($targetUrl . '/settings?verified=1&already=true');
         }
 
         // Tandai email sebagai terverifikasi
@@ -98,7 +98,7 @@ class AuthController extends Controller
             event(new \Illuminate\Auth\Events\Verified($user));
         }
 
-        return redirect($targetUrl . '/login?verified=1');
+        return redirect($targetUrl . '/settings?verified=1');
     }
 
     public function resendVerificationEmail(Request $request)
