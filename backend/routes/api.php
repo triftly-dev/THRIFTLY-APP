@@ -27,10 +27,6 @@ Route::post('/email/verification-notification', [AuthController::class, 'resendV
     ->middleware(['auth:sanctum', 'throttle:1,1'])
     ->name('verification.send');
 
-// Routes OTP Nomor Telepon
-Route::post('/otp/send', [OTPController::class, 'sendOTP']);
-Route::post('/otp/verify', [OTPController::class, 'verifyOTP']);
-
 // Routes Google Auth
 Route::get('/auth/google', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
@@ -47,10 +43,11 @@ Route::get('/blogs/{id}', [BlogController::class, 'show']);
 | Protected Routes (Wajib Login)
 |--------------------------------------------------------------------------
 */
-Route::post('/otp/send', [OTPController::class, 'sendOTP']);
-Route::post('/otp/verify', [OTPController::class, 'verifyOTP']);
-
 Route::middleware('auth:sanctum')->group(function () {
+
+    // Routes OTP (Dipindahkan ke sini agar terproteksi auth:sanctum)
+    Route::post('/otp/send', [OTPController::class, 'sendOTP']);
+    Route::post('/otp/verify', [OTPController::class, 'verifyOTP']);
 
     // --- FITUR UMUM (Buyer & Seller) ---
     // Auth & Profile

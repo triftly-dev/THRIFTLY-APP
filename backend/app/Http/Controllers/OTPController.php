@@ -18,18 +18,25 @@ class OTPController extends Controller
     {
         $request->validate([
             'phone' => 'nullable|string',
+            'no_telp' => 'nullable|string',
             'email' => 'nullable|email',
         ]);
 
+        // Ambil nomor HP dari parameter 'phone' atau 'no_telp' atau dari data User yang sedang login
+        $phone = $request->phone ?: $request->no_telp;
+        
+        if (!$phone && auth()->check()) {
+            $phone = auth()->user()->no_telp;
+        }
+
         // Normalisasi nomor telepon (08xxx -> 628xxx)
-        $phone = $request->phone;
         if ($phone && str_starts_with($phone, '0')) {
             $phone = '62' . substr($phone, 1);
         }
 
         $identifier = $request->email ?: $phone;
         if (!$identifier) {
-            return response()->json(['message' => 'Email atau Nomor HP wajib diisi.'], 400);
+            return response()->json(['message' => 'Email atau Nomor HP tidak ditemukan.'], 400);
         }
 
         $code = rand(100000, 999999);
@@ -74,12 +81,13 @@ class OTPController extends Controller
     {
         $request->validate([
             'phone' => 'nullable|string',
+            'no_telp' => 'nullable|string',
             'email' => 'nullable|email',
             'code' => 'required|string',
         ]);
 
         // Normalisasi nomor telepon jika ada
-        $phone = $request->phone;
+        $phone = $request->phone ?: $request->no_telp;
         if ($phone && str_starts_with($phone, '0')) {
             $phone = '62' . substr($phone, 1);
         }
@@ -117,16 +125,22 @@ class OTPController extends Controller
             if ($request->email) {
                 $user = User::where('email', $request->email)->first();
             } elseif ($phone) {
-                $user = User::where('no_telp', $phone)->first();
+                // Cari dengan nomor asli atau nomor normalisasi
+                $user = User::where('no_telp', $phone)
+                            ->orWhere('no_telp', '0' . substr($phone, 2))
+                            ->first();
             }
         }
 
         if ($user) {
-            // Logika perbaikan: Cek apakah OTP yang diverifikasi milik Email atau Phone
-            if ($otp->email) {
+            // Update nomor HP user jika dia sedang verifikasi HP
+            if ($phone && !$request->email) {
+                $user->update([
+                    'no_telp' => $phone,
+                    'phone_verified_at' => now()
+                ]);
+            } elseif ($otp->email) {
                 $user->update(['email_verified_at' => now()]);
-            } elseif ($otp->phone) {
-                $user->update(['phone_verified_at' => now()]);
             }
         }
 
