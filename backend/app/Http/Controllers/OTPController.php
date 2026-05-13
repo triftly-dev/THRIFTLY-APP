@@ -59,7 +59,7 @@ class OTPController extends Controller
                 return response()->json(['message' => 'Gagal mengirim email verifikasi.'], 500);
             }
         } else {
-            $token = env('FONNTE_TOKEN');
+            $token = config('services.fonnte.token');
             
             $response = Http::withHeaders([
                 'Authorization' => $token,
