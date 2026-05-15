@@ -30,6 +30,8 @@ class AuthController extends Controller
             'no_telp' => $request->no_telp,
             'password' => bcrypt($request->password),
             'role' => $request->role ?? 'buyer',
+            'alamat' => $request->alamat,
+            'lokasi' => $request->lokasi,
             'email_verified_at' => null,
         ]);
 
