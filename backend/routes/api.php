@@ -11,6 +11,7 @@ use App\Http\Controllers\OTPController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ScraperController;
+use App\Http\Controllers\SupportController;
 
 
 /*
@@ -37,6 +38,7 @@ Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
 Route::post('/newsletters', [NewsletterController::class, 'store']); // Sinkronisasi permintaan rekan
 Route::get('/blogs', [BlogController::class, 'index']);
 Route::get('/blogs/{id}', [BlogController::class, 'show']);
+Route::post('/contact', [SupportController::class, 'sendContactMessage']);
 
 /*
 |--------------------------------------------------------------------------
