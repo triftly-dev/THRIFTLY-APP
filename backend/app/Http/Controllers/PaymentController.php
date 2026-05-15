@@ -48,6 +48,7 @@ class PaymentController extends Controller
                 $product->stock = 0; // Set stok ke 0 untuk transaksi manual
                 $product->timestamps = false; 
                 $product->save();
+                \Illuminate\Support\Facades\Cache::forget('approved_products_limit_24');
             }
 
             return response()->json([
@@ -303,6 +304,10 @@ class PaymentController extends Controller
                 $product->stock = 0; // Pastikan stok jadi 0 agar pindah ke tab Tidak Aktif
                 $product->timestamps = false;
                 $product->save();
+                
+                // BERSIHKAN CACHE agar pembeli langsung melihat status STOK HABIS
+                \Illuminate\Support\Facades\Cache::forget('approved_products_limit_24');
+                
                 Log::info("Produk ID {$productId} berhasil ditandai sebagai SOLD melalui Midtrans.");
             }
         } catch (Exception $e) {
