@@ -22,6 +22,8 @@ use App\Http\Controllers\SupportController;
 Route::get('/test-api', function() { return response()->json(['message' => 'API is working!']); });
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // Routes Verifikasi Email (Route GET dipindah ke web.php agar tidak ada prefix /api/)
 Route::post('/email/verification-notification', [AuthController::class, 'resendVerificationEmail'])

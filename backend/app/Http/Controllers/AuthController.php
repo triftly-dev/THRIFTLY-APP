@@ -10,6 +10,9 @@ use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\DB;
+
 class AuthController extends Controller
 {
     public function register(Request $request)
@@ -161,5 +164,56 @@ class AuthController extends Controller
             }
             return redirect($frontendUrl . '/login?error=google_failed');
         }
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'Email tidak terdaftar.'], 404);
+        }
+
+        // Buat token reset password
+        $token = Str::random(60);
+        
+        // Simpan token ke table password_reset_tokens
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => Hash::make($token), 'created_at' => now()]
+        );
+
+        $frontendUrl = $request->input('frontend_url') ?? config('app.frontend_url');
+        $resetUrl = rtrim($frontendUrl, '/') . "/reset-password?token=" . $token . "&email=" . urlencode($user->email);
+
+        $user->notify(new ResetPasswordNotification($resetUrl));
+
+        return response()->json(['message' => 'Link reset password telah dikirim ke email Anda.']);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            return response()->json(['message' => 'Token reset password tidak valid atau sudah kedaluwarsa.'], 422);
+        }
+
+        // Update password user di tabel USERS
+        $user = User::where('email', $request->email)->first();
+        $user->update(['password' => Hash::make($request->password)]);
+
+        // Hapus token setelah digunakan
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json(['message' => 'Password Anda berhasil diperbarui. Silakan login kembali.']);
     }
 }
