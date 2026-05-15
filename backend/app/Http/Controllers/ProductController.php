@@ -38,40 +38,31 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'description' => 'required',
-            'price' => 'required|numeric',
-            'category' => 'required',
-            'images' => 'nullable|array',
-        ]);
-
-        // Proses gambar dari Base64 menjadi File Fisik
+        // Proses gambar
         $imagePaths = [];
-        if ($request->has('images')) {
-            foreach ($request->images as $base64) {
-                if (Str::startsWith($base64, 'data:image')) {
-                    $imagePaths[] = $this->uploadBase64Image($base64);
-                } else {
-                    $imagePaths[] = $base64; // Jika sudah berupa path
-                }
+        $imagesToProcess = $request->fotos ?? $request->images ?? [];
+        foreach ($imagesToProcess as $img) {
+            if (Str::startsWith($img, 'data:image')) {
+                $imagePaths[] = $this->uploadBase64Image($img);
+            } else {
+                $imagePaths[] = $img;
             }
         }
 
         $product = Product::create([
             'user_id' => Auth::id(),
-            'name' => $request->name,
-            'description' => $request->description,
-            'price' => $request->price,
-            'category' => $request->category,
-            'location' => $request->location,
-            'is_bu' => $request->is_bu ?? false,
+            'name' => $request->nama ?? $request->name,
+            'description' => $request->deskripsi ?? $request->description,
+            'price' => $request->harga ?? $request->price,
+            'category' => $request->kategori ?? $request->category,
+            'condition' => $request->kondisi ?? $request->condition,
+            'location' => $request->lokasi ?? $request->location,
+            'is_bu' => $request->isBU ?? $request->is_bu ?? false,
             'status' => 'pending',
-            'images' => $imagePaths, // Simpan array path, bukan base64
-            'stock' => $request->stock ?? 1,
+            'images' => $imagePaths,
+            'stock' => $request->stok ?? $request->stock ?? 1,
         ]);
 
-        // Hapus cache agar data baru muncul
         Cache::forget('approved_products_limit_24');
 
         return response()->json([
@@ -106,20 +97,40 @@ class ProductController extends Controller
 
         $data = $request->all();
 
-        // Jika ada perubahan gambar dalam bentuk base64, proses ulang
-        if ($request->has('images')) {
+        // Pemetaan nama kolom dari Frontend (Indo) ke Backend (English)
+        $mappedData = [
+            'name' => $request->nama ?? $request->name,
+            'description' => $request->deskripsi ?? $request->description,
+            'price' => $request->harga ?? $request->price,
+            'category' => $request->kategori ?? $request->category,
+            'condition' => $request->kondisi ?? $request->condition,
+            'stock' => $request->stok ?? $request->stock,
+            'is_bu' => $request->isBU ?? $request->is_bu ?? false,
+        ];
+
+        // Jika ada perubahan gambar
+        if ($request->has('images') || $request->has('fotos')) {
+            $imagesToProcess = $request->images ?? $request->fotos;
             $imagePaths = [];
-            foreach ($request->images as $img) {
-                if (Str::startsWith($img, 'data:image')) {
+            foreach ($imagesToProcess as $img) {
+                if (\Illuminate\Support\Str::startsWith($img, 'data:image')) {
                     $imagePaths[] = $this->uploadBase64Image($img);
                 } else {
                     $imagePaths[] = $img;
                 }
             }
-            $data['images'] = $imagePaths;
+            $mappedData['images'] = $imagePaths;
         }
 
-        $product->update($data);
+        // LOGIKA OTOMATIS: Jika produk tadinya 'sold' dan sekarang stok > 0, balikkan ke 'approved'
+        if ($product->status === 'sold' && ($mappedData['stock'] > 0)) {
+            $mappedData['status'] = 'approved';
+        }
+
+        $product->update(array_filter($mappedData, function($value) {
+            return $value !== null;
+        }));
+
         Cache::forget('approved_products_limit_24');
         
         return response()->json($product);
