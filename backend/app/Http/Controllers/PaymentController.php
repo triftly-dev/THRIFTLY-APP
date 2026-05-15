@@ -45,7 +45,8 @@ class PaymentController extends Controller
             $product = Product::find($request->product_id);
             if ($product) {
                 $product->status = 'sold';
-                $product->timestamps = false; // Hindari error _updated_at
+                $product->stock = 0; // Set stok ke 0 untuk transaksi manual
+                $product->timestamps = false; 
                 $product->save();
             }
 
@@ -299,7 +300,8 @@ class PaymentController extends Controller
             $product = Product::find($productId);
             if ($product) {
                 $product->status = 'sold';
-                $product->timestamps = false; // Hindari perubahan updated_at jika tidak diperlukan
+                $product->stock = 0; // Pastikan stok jadi 0 agar pindah ke tab Tidak Aktif
+                $product->timestamps = false;
                 $product->save();
                 Log::info("Produk ID {$productId} berhasil ditandai sebagai SOLD melalui Midtrans.");
             }
