@@ -30,10 +30,11 @@ class UserController extends Controller
             'date_of_birth' => 'nullable|date',
             'alamat' => 'nullable|string',
             'lokasi' => 'nullable|string',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'no_rekening' => 'nullable|string|max:50'
         ]);
 
-        $data = $request->only(['name', 'email', 'no_telp', 'gender', 'date_of_birth', 'alamat', 'lokasi']);
+        $data = $request->only(['name', 'email', 'no_telp', 'gender', 'date_of_birth', 'alamat', 'lokasi', 'no_rekening']);
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');

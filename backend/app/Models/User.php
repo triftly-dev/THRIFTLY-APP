@@ -41,7 +41,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'ktp_birth_date',
         'ktp_status',
         'ktp_rejection_reason',
-        'is_ktp_verified'
+        'is_ktp_verified',
+        'no_rekening'
     ];
 
     /**
