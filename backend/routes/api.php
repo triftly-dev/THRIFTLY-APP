@@ -12,6 +12,7 @@ use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ScraperController;
 use App\Http\Controllers\SupportController;
+use App\Http\Controllers\BankAccountController;
 
 
 /*
@@ -61,6 +62,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/change-password', [UserController::class, 'changePassword']);
     Route::post('/user/verify-ktp', [UserController::class, 'verifyKTP']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // --- FITUR REKENING BANK ---
+    Route::get('/bank-accounts', [BankAccountController::class, 'index']);
+    Route::post('/bank-accounts', [BankAccountController::class, 'store']);
+    Route::delete('/bank-accounts/{id}', [BankAccountController::class, 'destroy']);
 
     // --- FITUR CHAT ---
     // 1. Ambil daftar semua percakapan (untuk Inbox)
