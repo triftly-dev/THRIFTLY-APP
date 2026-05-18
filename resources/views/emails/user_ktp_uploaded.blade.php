@@ -17,7 +17,7 @@
         <p>Anda tetap dapat menggunakan aplikasi Thriftly seperti biasa, namun fitur "Penjual Terpercaya" akan aktif setelah verifikasi selesai.</p>
 
         <div style="margin-top: 30px; text-align: center;">
-            <a href="{{ config('app.frontend_url') }}/profile" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Cek Status Profil</a>
+            <a href="{{ $user->ktp_frontend_url ?? config('app.frontend_url') }}/profile?tab=security" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Cek Status Profil</a>
         </div>
         
         <p style="margin-top: 40px; font-size: 12px; color: #999;">Ini adalah email otomatis, mohon tidak membalas email ini.</p>
