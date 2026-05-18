@@ -175,8 +175,9 @@ class UserController extends Controller
             // 'role' => 'seller' // Opsional: otomatis jadi seller
         ]);
 
-        // Kirim email ke User
-        Mail::to($user->email)->send(new UserKtpStatusUpdated($user));
+        // Kirim email ke User dengan URL dinamis dari request
+        $frontendUrl = $request->input('frontend_url', env('FRONTEND_URL'));
+        Mail::to($user->email)->send(new UserKtpStatusUpdated($user, $frontendUrl));
 
         return response()->json(['message' => 'Verifikasi KTP disetujui.']);
     }
@@ -195,8 +196,9 @@ class UserController extends Controller
             'ktp_rejection_reason' => $request->reason
         ]);
 
-        // Kirim email ke User
-        Mail::to($user->email)->send(new UserKtpStatusUpdated($user));
+        // Kirim email ke User dengan URL dinamis dari request
+        $frontendUrl = $request->input('frontend_url', env('FRONTEND_URL'));
+        Mail::to($user->email)->send(new UserKtpStatusUpdated($user, $frontendUrl));
 
         return response()->json(['message' => 'Verifikasi KTP ditolak.']);
     }

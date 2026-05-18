@@ -22,7 +22,7 @@
         @endif
 
         <div style="margin-top: 30px; text-align: center;">
-            <a href="{{ config('app.frontend_url') }}/profile" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ke Profil Saya</a>
+            <a href="{{ $frontendUrl }}/profile?tab=security" style="background-color: #4f46e5; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ke Profil Saya</a>
         </div>
         
         <p style="margin-top: 40px; font-size: 12px; color: #999;">Ini adalah email otomatis, mohon tidak membalas email ini.</p>

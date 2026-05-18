@@ -15,13 +15,15 @@ class UserKtpStatusUpdated extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
+    public $frontendUrl;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($user)
+    public function __construct($user, $frontendUrl = null)
     {
         $this->user = $user;
+        $this->frontendUrl = $frontendUrl ?? config('app.frontend_url');
     }
 
     /**
