@@ -68,6 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bank-accounts', [BankAccountController::class, 'store']);
     Route::delete('/bank-accounts/{id}', [BankAccountController::class, 'destroy']);
 
+    // --- FITUR PENARIKAN SALDO (WITHDRAWAL) ---
+    Route::get('/withdrawals', [\App\Http\Controllers\WithdrawalController::class, 'index']);
+    Route::post('/withdrawals', [\App\Http\Controllers\WithdrawalController::class, 'store']);
+
     // --- FITUR CHAT ---
     // 1. Ambil daftar semua percakapan (untuk Inbox)
     Route::get('/messages', [MessageController::class, 'index']);

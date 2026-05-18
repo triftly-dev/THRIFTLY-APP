@@ -79,8 +79,38 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->notify(new \App\Notifications\VerifyEmailIndo);
     }
 
+    protected $appends = ['saldo'];
+
+    public function getSaldoAttribute()
+    {
+        // Hitung saldo ketahan (status = paid, settlement, atau shipping)
+        $ketahan = \App\Models\Transaction::where('seller_id', $this->id)
+            ->whereIn('status', ['paid', 'settlement', 'shipping'])
+            ->sum('harga_final');
+
+        // Hitung saldo bisa ditarik (status = completed)
+        $bisaDitarik = \App\Models\Transaction::where('seller_id', $this->id)
+            ->where('status', 'completed')
+            ->sum('harga_final');
+
+        // Kurangi dengan penarikan yang pernah diajukan (status = pending atau success)
+        $tertarik = \App\Models\Withdrawal::where('user_id', $this->id)
+            ->whereIn('status', ['pending', 'success'])
+            ->sum('amount');
+
+        return [
+            'bisaDitarik' => (int) max(0, $bisaDitarik - $tertarik),
+            'ketahan' => (int) $ketahan
+        ];
+    }
+
     public function bankAccounts()
     {
         return $this->hasMany(BankAccount::class);
+    }
+
+    public function withdrawals()
+    {
+        return $this->hasMany(Withdrawal::class);
     }
 }
