@@ -150,7 +150,8 @@ class UserController extends Controller
             'ktp_birth_place' => $request->ktp_birth_place,
             'ktp_birth_date' => $request->ktp_birth_date,
             'ktp_status' => 'pending',
-            'is_ktp_verified' => false
+            'is_ktp_verified' => false,
+            'ktp_frontend_url' => $request->input('frontend_url', $request->header('Origin') ?? env('FRONTEND_URL'))
         ]);
 
         // Kirim email ke User (Konfirmasi Upload)
@@ -175,8 +176,8 @@ class UserController extends Controller
             // 'role' => 'seller' // Opsional: otomatis jadi seller
         ]);
 
-        // Kirim email ke User dengan URL dinamis dari request
-        $frontendUrl = $request->input('frontend_url', env('FRONTEND_URL'));
+        // Kirim email ke User dengan memprioritaskan URL frontend yang tersimpan di KTP milik user
+        $frontendUrl = $user->ktp_frontend_url ?? $request->input('frontend_url', env('FRONTEND_URL'));
         Mail::to($user->email)->send(new UserKtpStatusUpdated($user, $frontendUrl));
 
         return response()->json(['message' => 'Verifikasi KTP disetujui.']);
@@ -196,8 +197,8 @@ class UserController extends Controller
             'ktp_rejection_reason' => $request->reason
         ]);
 
-        // Kirim email ke User dengan URL dinamis dari request
-        $frontendUrl = $request->input('frontend_url', env('FRONTEND_URL'));
+        // Kirim email ke User dengan memprioritaskan URL frontend yang tersimpan di KTP milik user
+        $frontendUrl = $user->ktp_frontend_url ?? $request->input('frontend_url', env('FRONTEND_URL'));
         Mail::to($user->email)->send(new UserKtpStatusUpdated($user, $frontendUrl));
 
         return response()->json(['message' => 'Verifikasi KTP ditolak.']);
