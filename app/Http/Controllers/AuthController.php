@@ -118,9 +118,21 @@ class AuthController extends Controller
         return response()->json(['message' => 'Sent']);
     }
 
-    public function redirectToGoogle()
+    public function redirectToGoogle(Request $request)
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        // Tangkap frontend_url dari query parameter atau header Referer
+        $frontendUrl = $request->query('frontend_url') 
+            ?? $request->header('Referer') 
+            ?? config('app.frontend_url');
+
+        // Bersihkan trailing slash jika ada
+        $frontendUrl = rtrim($frontendUrl, '/');
+
+        // Kirim frontend_url melalui parameter 'state' Google OAuth agar dikembalikan saat callback
+        return Socialite::driver('google')
+            ->stateless()
+            ->with(['state' => 'frontend_url=' . urlencode($frontendUrl)])
+            ->redirect();
     }
 
     public function handleGoogleCallback(Request $request)
@@ -128,11 +140,28 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
             
-            // Logika redirect dinamis untuk Google
-            $frontendUrl = config('app.frontend_url');
-            if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-                $frontendUrl = 'https://thriftly-marketplace.vercel.app';
+            // Ambil frontend_url dinamis dari parameter 'state' yang dikembalikan Google
+            $frontendUrl = null;
+            $state = $request->query('state');
+            if ($state) {
+                parse_str(urldecode($state), $stateParams);
+                if (isset($stateParams['frontend_url'])) {
+                    $frontendUrl = $stateParams['frontend_url'];
+                }
             }
+
+            // Fallback jika tidak ada parameter state (misalnya jika hit callback langsung)
+            if (!$frontendUrl) {
+                $frontendUrl = config('app.frontend_url');
+                
+                // Atasi typo pengecekan 'thrifty' vs 'thriftly'
+                if (str_contains($frontendUrl, 'thriftly-app-frontend.vercel.app') || str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
+                    $frontendUrl = 'https://thriftly-marketplace.vercel.app';
+                }
+            }
+
+            // Hilangkan trailing slash
+            $frontendUrl = rtrim($frontendUrl, '/');
 
             $user = User::where('google_id', $googleUser->id)
                 ->orWhere('email', $googleUser->email)
@@ -160,10 +189,24 @@ class AuthController extends Controller
             return redirect($frontendUrl . '/login-success?token=' . $token);
 
         } catch (\Exception $e) {
-            $frontendUrl = config('app.frontend_url');
-            if (str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
-                $frontendUrl = 'https://thriftly-marketplace.vercel.app';
+            // Tangkap fallback url jika terjadi error
+            $frontendUrl = null;
+            $state = $request->query('state');
+            if ($state) {
+                parse_str(urldecode($state), $stateParams);
+                if (isset($stateParams['frontend_url'])) {
+                    $frontendUrl = $stateParams['frontend_url'];
+                }
             }
+
+            if (!$frontendUrl) {
+                $frontendUrl = config('app.frontend_url');
+                if (str_contains($frontendUrl, 'thriftly-app-frontend.vercel.app') || str_contains($frontendUrl, 'thrifty-app-frontend.vercel.app')) {
+                    $frontendUrl = 'https://thriftly-marketplace.vercel.app';
+                }
+            }
+
+            $frontendUrl = rtrim($frontendUrl, '/');
             return redirect($frontendUrl . '/login?error=google_failed');
         }
     }
