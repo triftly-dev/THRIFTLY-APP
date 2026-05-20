@@ -494,6 +494,18 @@ class PaymentController extends Controller
                         "Digest:" . $digest;
         
         $signature = base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+
+        \Illuminate\Support\Facades\Log::info("Doku Signature Debug Details:", [
+            'Client-Id' => $clientId,
+            'Request-Id' => $requestId,
+            'Request-Timestamp' => $timestamp,
+            'Request-Target' => $targetPath,
+            'Digest' => $digest,
+            'RawSignatureToSign' => $rawSignature,
+            'SecretKeyMasked' => substr($secretKey, 0, 5) . '...' . substr($secretKey, -5),
+            'SecretKeyLength' => strlen($secretKey),
+            'CalculatedSignature' => $signature,
+        ]);
         
         return "HMACSHA256=" . $signature;
     }
