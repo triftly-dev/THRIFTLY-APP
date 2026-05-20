@@ -111,9 +111,9 @@ class WithdrawalController extends Controller
     private function disburseViaDoku(Withdrawal $withdrawal)
     {
         try {
-            $clientId = config('services.doku.client_id');
-            $secretKey = config('services.doku.secret_key');
-            $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
+            $clientId = trim(config('services.doku.client_id'));
+            $secretKey = trim(config('services.doku.secret_key'));
+            $apiUrl = trim(config('services.doku.api_url') ?? 'https://api-sandbox.doku.com');
 
             if (!$clientId || !$secretKey) {
                 return [

@@ -119,8 +119,8 @@ class PaymentController extends Controller
         // Jika DOKU dikonfigurasi, gunakan DOKU
         if (config('services.doku.client_id') && config('services.doku.secret_key')) {
             try {
-                $clientId = config('services.doku.client_id');
-                $apiUrl = config('services.doku.api_url');
+                $clientId = trim(config('services.doku.client_id'));
+                $apiUrl = trim(config('services.doku.api_url'));
                 
                 $orderId = 'TRF-' . time() . '-' . ($request->product_id ?? '1');
                 $timestamp = gmdate("Y-m-d\TH:i:s\Z");
@@ -422,9 +422,9 @@ class PaymentController extends Controller
     private function checkDokuTransactionStatus(Transaction $transaction)
     {
         try {
-            $clientId = config('services.doku.client_id');
-            $secretKey = config('services.doku.secret_key');
-            $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
+            $clientId = trim(config('services.doku.client_id'));
+            $secretKey = trim(config('services.doku.secret_key'));
+            $apiUrl = trim(config('services.doku.api_url') ?? 'https://api-sandbox.doku.com');
             
             if (!$clientId || !$secretKey) {
                 return $transaction->status;
@@ -481,8 +481,8 @@ class PaymentController extends Controller
      */
     private function generateDokuSignature($body, $requestId, $timestamp, $targetPath)
     {
-        $clientId = config('services.doku.client_id');
-        $secretKey = config('services.doku.secret_key');
+        $clientId = trim(config('services.doku.client_id'));
+        $secretKey = trim(config('services.doku.secret_key'));
         
         $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES);
         $digest = base64_encode(hash('sha256', $jsonBody, true));
@@ -520,8 +520,8 @@ class PaymentController extends Controller
 
         // Jalankan Signature Verification untuk Doku
         $signatureHeader = $request->header('Signature');
-        $clientId = config('services.doku.client_id');
-        $secretKey = config('services.doku.secret_key');
+        $clientId = trim(config('services.doku.client_id'));
+        $secretKey = trim(config('services.doku.secret_key'));
         $requestId = $request->header('Request-Id');
         $timestamp = $request->header('Request-Timestamp');
         $targetPath = '/api/payment/doku-notification';
