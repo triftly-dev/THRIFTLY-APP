@@ -408,7 +408,7 @@ class PaymentController extends Controller
                         "Request-Id:" . $requestId . "\n" .
                         "Request-Timestamp:" . $timestamp . "\n" .
                         "Request-Target:" . $targetPath . "\n" .
-                        "Bytes:" . $digest;
+                        "Digest:" . $digest;
         
         $signature = base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
         
@@ -450,7 +450,7 @@ class PaymentController extends Controller
                         "Request-Id:" . $requestId . "\n" .
                         "Request-Timestamp:" . $timestamp . "\n" .
                         "Request-Target:" . $targetPath . "\n" .
-                        "Bytes:" . $digest;
+                        "Digest:" . $digest;
 
         $calculatedSignature = "HMACSHA256=" . base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
 
