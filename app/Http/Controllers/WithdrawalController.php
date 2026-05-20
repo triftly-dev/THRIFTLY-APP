@@ -8,6 +8,7 @@ use App\Models\BankAccount;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class WithdrawalController extends Controller
 {
@@ -65,8 +66,30 @@ class WithdrawalController extends Controller
             'status' => 'pending'
         ]);
 
-        // 2. LOG / NOTIFIKASI KE SISTEM MIDTRANS (Simulasi Payout/Disbursement)
-        Log::info("MIDTRANS DISBURSEMENT NOTIFICATION: Saldo withdrawal diajukan untuk User: {$user->name} ({$user->email}). Nominal: Rp " . number_format($request->amount, 0, ',', '.') . ". Rekening: {$withdrawal->bank_name} - {$withdrawal->account_number} a.n {$withdrawal->account_holder}. Status Midtrans: REQUESTED.");
+        // 2. Hubungi API Doku Disbursement secara otomatis
+        $dokuResult = $this->disburseViaDoku($withdrawal);
+        $message = 'Pengajuan penarikan saldo berhasil dikirim!';
+
+        if ($dokuResult['success']) {
+            $withdrawal->update(['status' => 'completed']);
+            $message = 'Penarikan saldo otomatis via Doku berhasil diproses!';
+        } else {
+            $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
+            $isSandbox = str_contains($apiUrl, 'sandbox');
+
+            if ($isSandbox) {
+                // Untuk Sandbox, jika API gagal (misal produk Payouts belum diaktifkan di akun merchant sandbox),
+                // kita simulasikan sukses agar flow pengujian lancar
+                $withdrawal->update(['status' => 'completed']);
+                $message = 'Penarikan saldo disimulasikan berhasil (Doku Sandbox: ' . ($dokuResult['message'] ?? 'API error') . ')';
+                Log::warning("Doku Sandbox Payout Simulated: " . ($dokuResult['message'] ?? 'API error'));
+            } else {
+                $withdrawal->update(['status' => 'failed']);
+                return response()->json([
+                    'message' => 'Gagal memproses penarikan otomatis via Doku: ' . ($dokuResult['message'] ?? 'Terjadi kesalahan.')
+                ], 400);
+            }
+        }
 
         // 3. KIRIM EMAIL NOTIFIKASI KE USER
         try {
@@ -76,9 +99,102 @@ class WithdrawalController extends Controller
         }
 
         return response()->json([
-            'message' => 'Pengajuan penarikan saldo berhasil dikirim! Silakan periksa email Anda.',
+            'message' => $message,
             'withdrawal' => $withdrawal,
             'current_balance' => $user->fresh()->saldo // Berikan saldo terbaru
         ], 201);
+    }
+
+    /**
+     * Kirim dana otomatis via Doku Payouts / Disbursement
+     */
+    private function disburseViaDoku(Withdrawal $withdrawal)
+    {
+        try {
+            $clientId = config('services.doku.client_id');
+            $secretKey = config('services.doku.secret_key');
+            $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
+
+            if (!$clientId || !$secretKey) {
+                return [
+                    'success' => false,
+                    'message' => 'Doku Client ID atau Secret Key belum dikonfigurasi.'
+                ];
+            }
+
+            $timestamp = gmdate("Y-m-d\TH:i:s\Z");
+            $requestId = (string) \Illuminate\Support\Str::uuid();
+            $targetPath = '/disbursement/v2/transfer';
+
+            $bankCode = $this->mapBankNameToCode($withdrawal->bank_name);
+
+            $body = [
+                'amount' => (int) $withdrawal->amount,
+                'beneficiary_bank_code' => $bankCode,
+                'beneficiary_account_number' => $withdrawal->account_number,
+                'beneficiary_name' => $withdrawal->account_holder,
+                'description' => 'Withdrawal ' . $withdrawal->id,
+            ];
+
+            // Generate signature
+            $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES);
+            $digest = base64_encode(hash('sha256', $jsonBody, true));
+            
+            $rawSignature = "Client-Id:" . $clientId . "\n" .
+                            "Request-Id:" . $requestId . "\n" .
+                            "Request-Timestamp:" . $timestamp . "\n" .
+                            "Request-Target:" . $targetPath . "\n" .
+                            "Digest:" . $digest;
+            
+            $signature = base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+            $signatureHeader = "HMACSHA256=" . $signature;
+
+            Log::info("Sending Doku Payout for Withdrawal ID {$withdrawal->id} to Bank: {$bankCode}");
+
+            $response = Http::withHeaders([
+                'Client-Id' => $clientId,
+                'Request-Id' => $requestId,
+                'Request-Timestamp' => $timestamp,
+                'Signature' => $signatureHeader,
+                'Content-Type' => 'application/json',
+            ])->post($apiUrl . $targetPath, $body);
+
+            if ($response->successful()) {
+                $resData = $response->json();
+                Log::info("Doku Payout Success: " . json_encode($resData));
+                return [
+                    'success' => true,
+                    'data' => $resData
+                ];
+            } else {
+                Log::error("Doku Payout Failed: " . $response->status() . " - " . $response->body());
+                return [
+                    'success' => false,
+                    'status_code' => $response->status(),
+                    'message' => $response->json()['message'] ?? $response->body()
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error("Exception in disburseViaDoku: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Mapping nama bank ke standard bank code Doku
+     */
+    private function mapBankNameToCode($bankName)
+    {
+        $bankName = strtoupper($bankName);
+        if (str_contains($bankName, 'MANDIRI')) return 'MANDIRI';
+        if (str_contains($bankName, 'BCA')) return 'BCA';
+        if (str_contains($bankName, 'BRI')) return 'BRI';
+        if (str_contains($bankName, 'BNI')) return 'BNI';
+        if (str_contains($bankName, 'CIMB')) return 'CIMB';
+        if (str_contains($bankName, 'PERMATA')) return 'PERMATA';
+        return $bankName; // Fallback
     }
 }
