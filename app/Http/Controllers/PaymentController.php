@@ -14,6 +14,17 @@ class PaymentController extends Controller
 {
     public function index()
     {
+        // Active check status fallback untuk transaksi Doku yang masih pending
+        $pendingTransactions = Transaction::where('buyer_id', Auth::id())
+            ->where('status', 'pending')
+            ->whereNotNull('snap_token')
+            ->where('snap_token', 'like', '%doku.com%')
+            ->get();
+            
+        foreach ($pendingTransactions as $transaction) {
+            $this->checkDokuTransactionStatus($transaction);
+        }
+
         // Ambil pesanan saya sebagai pembeli dengan pagination
         $transactions = Transaction::with('product')
             ->where('buyer_id', Auth::id())
@@ -67,6 +78,17 @@ class PaymentController extends Controller
 
     public function sellerOrders()
     {
+        // Active check status fallback untuk transaksi Doku masuk yang masih pending
+        $pendingTransactions = Transaction::where('seller_id', Auth::id())
+            ->where('status', 'pending')
+            ->whereNotNull('snap_token')
+            ->where('snap_token', 'like', '%doku.com%')
+            ->get();
+            
+        foreach ($pendingTransactions as $transaction) {
+            $this->checkDokuTransactionStatus($transaction);
+        }
+
         // Ambil pesanan yang masuk ke toko saya sebagai penjual
         $transactions = Transaction::with(['product', 'buyer'])
             ->where('seller_id', Auth::id())
@@ -392,6 +414,66 @@ class PaymentController extends Controller
         } catch (Exception $e) {
             Log::error("Gagal menandai produk ID {$productId} sebagai SOLD: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Active check status from Doku API
+     */
+    private function checkDokuTransactionStatus(Transaction $transaction)
+    {
+        try {
+            $clientId = config('services.doku.client_id');
+            $secretKey = config('services.doku.secret_key');
+            $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
+            
+            if (!$clientId || !$secretKey) {
+                return $transaction->status;
+            }
+
+            $timestamp = gmdate("Y-m-d\TH:i:s\Z");
+            $requestId = (string) \Illuminate\Support\Str::uuid();
+            $targetPath = '/orders/v1/status/' . $transaction->order_id;
+            
+            // Format raw signature untuk GET request
+            $rawSignature = "Client-Id:" . $clientId . "\n" .
+                            "Request-Id:" . $requestId . "\n" .
+                            "Request-Timestamp:" . $timestamp . "\n" .
+                            "Request-Target:" . $targetPath;
+            
+            $signature = base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+            $signatureHeader = "HMACSHA256=" . $signature;
+            
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Client-Id' => $clientId,
+                'Request-Id' => $requestId,
+                'Request-Timestamp' => $timestamp,
+                'Signature' => $signatureHeader,
+            ])->get($apiUrl . $targetPath);
+            
+            if ($response->successful()) {
+                $resData = $response->json();
+                Log::info("Doku Check Status Response for {$transaction->order_id}: " . json_encode($resData));
+                
+                $status = $resData['transaction']['status'] ?? null;
+                
+                if ($status && strtoupper($status) === 'SUCCESS') {
+                    $transaction->update(['status' => 'settlement']);
+                    $this->markProductAsSold($transaction->product_id);
+                    Log::info("Doku Status Check: Transaction {$transaction->order_id} is paid!");
+                    return 'settlement';
+                } elseif ($status && strtoupper($status) === 'FAILED') {
+                    $transaction->update(['status' => 'failed']);
+                    Log::info("Doku Status Check: Transaction {$transaction->order_id} is failed!");
+                    return 'failed';
+                }
+            } else {
+                Log::error("Doku Check Status Failed for {$transaction->order_id}: " . $response->body());
+            }
+        } catch (\Exception $e) {
+            Log::error("Error checking Doku status: " . $e->getMessage());
+        }
+        
+        return $transaction->status;
     }
 
     /**
