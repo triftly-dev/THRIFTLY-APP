@@ -101,6 +101,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Link Laporan Midtrans (Wajib di LUAR middleware auth karena dipanggil server Midtrans)
 Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
+Route::get('/payment/debug-doku', function() {
+    return response()->json([
+        'client_id' => config('services.doku.client_id'),
+        'api_url' => config('services.doku.api_url'),
+        'has_secret' => !empty(config('services.doku.secret_key')),
+        'raw_env_client_id' => env('DOKU_CLIENT_ID'),
+    ]);
+});
 Route::post('/payment/doku-notification', [PaymentController::class, 'handleDokuNotification']);
 
 Route::middleware('auth:sanctum')->group(function () {
