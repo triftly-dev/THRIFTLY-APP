@@ -162,7 +162,7 @@ class PaymentController extends Controller
                     'Request-Id' => $requestId,
                     'Request-Timestamp' => $timestamp,
                     'Signature' => $signature,
-                    'Digest' => $digest,
+                    'Digest' => 'SHA-256=' . $digest,
                     'Content-Type' => 'application/json'
                 ])
                 ->beforeSending(function ($request) {

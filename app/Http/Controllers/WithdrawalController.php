@@ -156,7 +156,7 @@ class WithdrawalController extends Controller
                 'Request-Id' => $requestId,
                 'Request-Timestamp' => $timestamp,
                 'Signature' => $signatureHeader,
-                'Digest' => $digest,
+                'Digest' => 'SHA-256=' . $digest,
                 'Content-Type' => 'application/json',
             ])->post($apiUrl . $targetPath, $body);
 
