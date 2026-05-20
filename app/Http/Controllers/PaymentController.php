@@ -154,6 +154,7 @@ class PaymentController extends Controller
                 ];
                 
                 $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES);
+                $digest = base64_encode(hash('sha256', $jsonBody, true));
                 $signature = $this->generateDokuSignature($body, $requestId, $timestamp, $targetPath);
                 
                 $response = \Illuminate\Support\Facades\Http::withHeaders([
@@ -161,6 +162,7 @@ class PaymentController extends Controller
                     'Request-Id' => $requestId,
                     'Request-Timestamp' => $timestamp,
                     'Signature' => $signature,
+                    'Digest' => $digest,
                     'Content-Type' => 'application/json'
                 ])->withBody($jsonBody, 'application/json')->post($apiUrl . $targetPath);
                 
