@@ -424,7 +424,7 @@ class PaymentController extends Controller
         Log::info("Doku Webhook Request: " . json_encode($request->all()));
 
         $invoiceNumber = $request->input('order.invoice_number');
-        $paymentStatus = $request->input('payment.status');
+        $paymentStatus = $request->input('transaction.status');
 
         if (!$invoiceNumber) {
             return response()->json(['message' => 'Invoice number not found'], 400);
