@@ -94,6 +94,84 @@ class PaymentController extends Controller
      */
     public function createPayment(Request $request)
     {
+        // Jika DOKU dikonfigurasi, gunakan DOKU
+        if (config('services.doku.client_id') && config('services.doku.secret_key')) {
+            try {
+                $clientId = config('services.doku.client_id');
+                $apiUrl = config('services.doku.api_url');
+                
+                $orderId = 'TRF-' . time() . '-' . ($request->product_id ?? '1');
+                $timestamp = gmdate("Y-m-d\TH:i:s\Z");
+                $requestId = (string) \Illuminate\Support\Str::uuid();
+                $targetPath = '/checkout/v1/payment';
+                
+                // Buat Transaksi di Database
+                $transaction = Transaction::create([
+                    'order_id' => $orderId,
+                    'product_id' => $request->product_id,
+                    'buyer_id' => Auth::id(),
+                    'seller_id' => $request->seller_id,
+                    'harga_final' => $request->price ?? 10000,
+                    'ongkir' => $request->ongkir ?? 0,
+                    'status' => 'pending',
+                    'alamat_pengiriman' => $request->alamat_pengiriman ?? '-',
+                ]);
+                
+                $frontendUrl = env('FRONTEND_URL') ?? 'https://thriftly-app-frontend.vercel.app';
+                
+                $body = [
+                    "order" => [
+                        "amount" => (int) ($request->price ?? 10000),
+                        "invoice_number" => $orderId,
+                        "callback_url" => $frontendUrl . "/payment/success/" . $orderId,
+                        "auto_redirect" => true
+                    ],
+                    "payment" => [
+                        "payment_due_date" => 60
+                    ]
+                ];
+                
+                $signature = $this->generateDokuSignature($body, $requestId, $timestamp, $targetPath);
+                
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'Client-Id' => $clientId,
+                    'Request-Id' => $requestId,
+                    'Request-Timestamp' => $timestamp,
+                    'Signature' => $signature,
+                    'Content-Type' => 'application/json'
+                ])->post($apiUrl . $targetPath, $body);
+                
+                if ($response->successful()) {
+                    $resData = $response->json();
+                    $paymentUrl = $resData['response']['payment']['url'] ?? null;
+                    
+                    if ($paymentUrl) {
+                        $transaction->update(['snap_token' => $paymentUrl]);
+                        
+                        return response()->json([
+                            'doku' => true,
+                            'payment_url' => $paymentUrl,
+                            'order_id' => $orderId
+                        ]);
+                    }
+                }
+                
+                Log::error('DOKU API ERROR RESPONSE: ' . $response->body());
+                return response()->json([
+                    'message' => 'Gagal memproses pembayaran Doku',
+                    'error' => $response->body()
+                ], 500);
+                
+            } catch (Exception $e) {
+                Log::error('DOKU ERROR: ' . $e->getMessage());
+                return response()->json([
+                    'message' => 'Gagal memproses pembayaran Doku',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+        }
+
+        // Fallback ke Midtrans jika DOKU tidak dikonfigurasi
         try {
             $serverKey = trim(config('services.midtrans.server_key'));
             \Midtrans\Config::$serverKey = $serverKey;
@@ -313,5 +391,83 @@ class PaymentController extends Controller
         } catch (Exception $e) {
             Log::error("Gagal menandai produk ID {$productId} sebagai SOLD: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Doku Signature Generator
+     */
+    private function generateDokuSignature($body, $requestId, $timestamp, $targetPath)
+    {
+        $clientId = config('services.doku.client_id');
+        $secretKey = config('services.doku.secret_key');
+        
+        $jsonBody = json_encode($body, JSON_UNESCAPED_SLASHES);
+        $digest = base64_encode(hash('sha256', $jsonBody, true));
+        
+        $rawSignature = "Client-Id:" . $clientId . "\n" .
+                        "Request-Id:" . $requestId . "\n" .
+                        "Request-Timestamp:" . $timestamp . "\n" .
+                        "Request-Target:" . $targetPath . "\n" .
+                        "Bytes:" . $digest;
+        
+        $signature = base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+        
+        return "HMACSHA256=" . $signature;
+    }
+
+    /**
+     * Doku Webhook Notification Handler
+     */
+    public function handleDokuNotification(Request $request)
+    {
+        Log::info("Doku Webhook Request: " . json_encode($request->all()));
+
+        $invoiceNumber = $request->input('order.invoice_number');
+        $paymentStatus = $request->input('payment.status');
+
+        if (!$invoiceNumber) {
+            return response()->json(['message' => 'Invoice number not found'], 400);
+        }
+
+        $localTransaction = Transaction::where('order_id', $invoiceNumber)->first();
+
+        if (!$localTransaction) {
+            return response()->json(['message' => 'Transaksi tidak ditemukan'], 200); // 200 agar Doku tidak retry berulang kali
+        }
+
+        // Jalankan Signature Verification untuk Doku
+        $signatureHeader = $request->header('Signature');
+        $clientId = config('services.doku.client_id');
+        $secretKey = config('services.doku.secret_key');
+        $requestId = $request->header('Request-Id');
+        $timestamp = $request->header('Request-Timestamp');
+        $targetPath = '/api/payment/doku-notification';
+
+        $rawBody = $request->getContent();
+        $digest = base64_encode(hash('sha256', $rawBody, true));
+
+        $rawSignature = "Client-Id:" . $clientId . "\n" .
+                        "Request-Id:" . $requestId . "\n" .
+                        "Request-Timestamp:" . $timestamp . "\n" .
+                        "Request-Target:" . $targetPath . "\n" .
+                        "Bytes:" . $digest;
+
+        $calculatedSignature = "HMACSHA256=" . base64_encode(hash_hmac('sha256', $rawSignature, $secretKey, true));
+
+        if ($signatureHeader !== $calculatedSignature) {
+            Log::warning("Doku Webhook Signature Mismatch! Calculated: {$calculatedSignature}, Received: {$signatureHeader}");
+        }
+
+        // Update status sesuai notifikasi Doku
+        if (strtoupper($paymentStatus) === 'SUCCESS') {
+            $localTransaction->update(['status' => 'settlement']);
+            $this->markProductAsSold($localTransaction->product_id);
+            Log::info("Doku Payment Success: Order: {$invoiceNumber}");
+        } else {
+            $localTransaction->update(['status' => 'failed']);
+            Log::info("Doku Payment Failed/Pending: Order: {$invoiceNumber}");
+        }
+
+        return response()->json(['message' => 'Notification processed successfully'], 200);
     }
 }

@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Link Laporan Midtrans (Wajib di LUAR middleware auth karena dipanggil server Midtrans)
 Route::post('/payment/notification', [PaymentController::class, 'handleNotification']);
+Route::post('/payment/doku-notification', [PaymentController::class, 'handleDokuNotification']);
 
 Route::middleware('auth:sanctum')->group(function () {
     // --- FITUR PENJUALAN (Seller) ---
