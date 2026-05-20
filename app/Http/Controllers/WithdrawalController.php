@@ -71,7 +71,7 @@ class WithdrawalController extends Controller
         $message = 'Pengajuan penarikan saldo berhasil dikirim!';
 
         if ($dokuResult['success']) {
-            $withdrawal->update(['status' => 'completed']);
+            $withdrawal->update(['status' => 'success']);
             $message = 'Penarikan saldo otomatis via Doku berhasil diproses!';
         } else {
             $apiUrl = config('services.doku.api_url') ?? 'https://api-sandbox.doku.com';
@@ -80,7 +80,7 @@ class WithdrawalController extends Controller
             if ($isSandbox) {
                 // Untuk Sandbox, jika API gagal (misal produk Payouts belum diaktifkan di akun merchant sandbox),
                 // kita simulasikan sukses agar flow pengujian lancar
-                $withdrawal->update(['status' => 'completed']);
+                $withdrawal->update(['status' => 'success']);
                 $message = 'Penarikan saldo disimulasikan berhasil (Doku Sandbox: ' . ($dokuResult['message'] ?? 'API error') . ')';
                 Log::warning("Doku Sandbox Payout Simulated: " . ($dokuResult['message'] ?? 'API error'));
             } else {
