@@ -164,7 +164,12 @@ class PaymentController extends Controller
                     'Signature' => $signature,
                     'Digest' => $digest,
                     'Content-Type' => 'application/json'
-                ])->withBody($jsonBody, 'application/json')->post($apiUrl . $targetPath);
+                ])
+                ->beforeSending(function ($request) {
+                    \Illuminate\Support\Facades\Log::info("Doku Request Sent Headers: " . json_encode($request->headers()));
+                    \Illuminate\Support\Facades\Log::info("Doku Request Sent Body: " . $request->body());
+                })
+                ->withBody($jsonBody, 'application/json')->post($apiUrl . $targetPath);
                 
                 if ($response->successful()) {
                     $resData = $response->json();
